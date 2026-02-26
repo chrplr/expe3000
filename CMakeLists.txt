@@ -13,22 +13,25 @@ set(SOURCES
 
 # Use PkgConfig to find SDL3 and its components
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(SDL3 REQUIRED sdl3)
-pkg_check_modules(SDL3_IMAGE REQUIRED sdl3-image)
-pkg_check_modules(SDL3_TTF REQUIRED sdl3-ttf)
 
-# Include directories
-include_directories(include ${SDL3_INCLUDE_DIRS} ${SDL3_IMAGE_INCLUDE_DIRS} ${SDL3_TTF_INCLUDE_DIRS})
+# We use IMPORTED_TARGET so that PkgConfig::... targets are created.
+# These targets automatically include the correct -L library paths.
+pkg_check_modules(SDL3 REQUIRED IMPORTED_TARGET sdl3)
+pkg_check_modules(SDL3_IMAGE REQUIRED IMPORTED_TARGET sdl3-image)
+pkg_check_modules(SDL3_TTF REQUIRED IMPORTED_TARGET sdl3-ttf)
+
+# Include directories (include/ is local, the others are handled by the targets)
+include_directories(include)
 
 # Executable
 add_executable(expe3000 ${SOURCES})
 
-# Link libraries
+# Link libraries against the imported targets
 target_link_libraries(expe3000 PRIVATE 
-    ${SDL3_LIBRARIES} 
-    ${SDL3_IMAGE_LIBRARIES} 
-    ${SDL3_TTF_LIBRARIES}
+    PkgConfig::SDL3 
+    PkgConfig::SDL3_IMAGE 
+    PkgConfig::SDL3_TTF
 )
 
 # Add compiler options
-target_compile_options(expe3000 PRIVATE -Wno-missing-field-initializers ${SDL3_CFLAGS_OTHER} ${SDL3_IMAGE_CFLAGS_OTHER} ${SDL3_TTF_CFLAGS_OTHER})
+target_compile_options(expe3000 PRIVATE -Wno-missing-field-initializers)
