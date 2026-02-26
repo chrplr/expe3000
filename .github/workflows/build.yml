@@ -17,7 +17,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          cmake pkg-config build-essential ninja-build \
+          cmake pkg-config build-essential ninja-build tar \
           libasound2-dev libpulse-dev libdbus-1-dev libwayland-dev \
           libx11-dev libxcursor-dev libxext-dev libxi-dev libxinerama-dev \
           libxrandr-dev libxss-dev libxtst-dev libjpeg-dev libpng-dev \
@@ -106,6 +106,7 @@ jobs:
           mingw-w64-x86_64-toolchain
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-ninja
+          mingw-w64-x86_64-zip
           mingw-w64-x86_64-sdl3
           mingw-w64-x86_64-sdl3-image
           mingw-w64-x86_64-sdl3-ttf
