@@ -309,48 +309,104 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
 
 /* ─── Resource Loading / Freeing ─────────────────────────────── */
 
+typedef struct CacheEntry {
+    StimType type;
+    char     file_path[256];
+    SDL_Texture *texture;
+    float    w, h;
+    SoundResource sound;
+    struct CacheEntry *next;
+} CacheEntry;
+
+static CacheEntry* find_in_cache(CacheEntry *head, StimType type, const char *path) {
+    CacheEntry *curr = head;
+    while (curr) {
+        if (curr->type == type && strcmp(curr->file_path, path) == 0) {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
+
 static Resource *load_resources(SDL_Renderer *renderer, const Experiment *exp,
-                                 TTF_Font *font)
+                                 TTF_Font *font, CacheEntry **cache_out)
 {
+    *cache_out = NULL;
     Resource *res = calloc(exp->count, sizeof(Resource));
     if (!res) return NULL;
 
     for (int i = 0; i < exp->count; i++) {
         const Stimulus *s = &exp->stimuli[i];
+
+        CacheEntry *entry = find_in_cache(*cache_out, s->type, s->file_path);
+
+        if (entry) {
+            res[i].texture = entry->texture;
+            res[i].w = entry->w;
+            res[i].h = entry->h;
+            res[i].sound = entry->sound;
+            continue;
+        }
+
+        /* Not in cache, load it */
+        entry = calloc(1, sizeof(CacheEntry));
+        if (!entry) {
+            SDL_Log("load_resources: calloc failed for CacheEntry");
+            continue;
+        }
+        entry->type = s->type;
+        strncpy(entry->file_path, s->file_path, sizeof(entry->file_path) - 1);
+
         if (s->type == STIM_IMAGE) {
-            res[i].texture = IMG_LoadTexture(renderer, s->file_path);
-            if (res[i].texture)
-                SDL_GetTextureSize(res[i].texture, &res[i].w, &res[i].h);
+            entry->texture = IMG_LoadTexture(renderer, s->file_path);
+            if (entry->texture)
+                SDL_GetTextureSize(entry->texture, &entry->w, &entry->h);
             else
                 SDL_Log("load_resources: failed to load image '%s': %s", s->file_path, SDL_GetError());
         } else if (s->type == STIM_SOUND) {
-            if (!SDL_LoadWAV(s->file_path, &res[i].sound.spec,
-                             &res[i].sound.data, &res[i].sound.len))
+            if (!SDL_LoadWAV(s->file_path, &entry->sound.spec,
+                             &entry->sound.data, &entry->sound.len))
                 SDL_Log("load_resources: failed to load WAV '%s': %s", s->file_path, SDL_GetError());
         } else if (s->type == STIM_TEXT) {
             if (!font) {
                 SDL_Log("load_resources: text stimulus '%s' skipped (no font loaded)", s->file_path);
-                continue;
-            }
-            SDL_Color white = {255, 255, 255, 255};
-            SDL_Surface *surf = TTF_RenderText_Blended(font, s->file_path, 0, white);
-            if (surf) {
-                res[i].texture = SDL_CreateTextureFromSurface(renderer, surf);
-                res[i].w = (float)surf->w;
-                res[i].h = (float)surf->h;
-                SDL_DestroySurface(surf);
+            } else {
+                SDL_Color white = {255, 255, 255, 255};
+                SDL_Surface *surf = TTF_RenderText_Blended(font, s->file_path, 0, white);
+                if (surf) {
+                    entry->texture = SDL_CreateTextureFromSurface(renderer, surf);
+                    entry->w = (float)surf->w;
+                    entry->h = (float)surf->h;
+                    SDL_DestroySurface(surf);
+                }
             }
         }
+
+        /* Add to cache */
+        entry->next = *cache_out;
+        *cache_out = entry;
+
+        /* Copy to result array */
+        res[i].texture = entry->texture;
+        res[i].w = entry->w;
+        res[i].h = entry->h;
+        res[i].sound = entry->sound;
     }
     return res;
 }
 
-static void free_resources(Resource *resources, int count) {
-    for (int i = 0; i < count; i++) {
-        if (resources[i].texture)    SDL_DestroyTexture(resources[i].texture);
-        if (resources[i].sound.data) SDL_free(resources[i].sound.data);
-    }
+static void free_resources(Resource *resources, CacheEntry *cache) {
     free(resources);
+
+    CacheEntry *curr = cache;
+    while (curr) {
+        CacheEntry *next = curr->next;
+        if (curr->texture)    SDL_DestroyTexture(curr->texture);
+        if (curr->sound.data) SDL_free(curr->sound.data);
+        free(curr);
+        curr = next;
+    }
 }
 
 /* ─── Result Writing ─────────────────────────────────────────── */
@@ -650,7 +706,8 @@ int main(int argc, const char **argv) {
     SDL_ResumeAudioStreamDevice(master_stream);
 
     /* ── Load resources ── */
-    Resource *resources = load_resources(renderer, exp, font);
+    CacheEntry *cache = NULL;
+    Resource *resources = load_resources(renderer, exp, font, &cache);
     if (!resources) {
         SDL_Log("load_resources: calloc failed");
         SDL_DestroyAudioStream(master_stream);
@@ -674,7 +731,7 @@ int main(int argc, const char **argv) {
 
     /* ── Cleanup ── */
     free_event_log(&log);
-    free_resources(resources, exp->count);
+    free_resources(resources, cache);
     SDL_DestroyAudioStream(master_stream);
     SDL_DestroyMutex(mixer.mutex);
     free_experiment(exp);

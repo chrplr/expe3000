@@ -4,30 +4,31 @@ project(expe3000 C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Find SDL3, SDL3_image, and SDL3_ttf
-find_package(SDL3 REQUIRED)
-find_package(SDL3_image REQUIRED)
-find_package(SDL3_ttf REQUIRED)
-
-# Include directories
-include_directories(include)
-
 # Source files
 set(SOURCES 
     src/main.c 
     src/csv_parser.c
+    src/argparse.c
 )
+
+# Use PkgConfig to find SDL3 and its components
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SDL3 REQUIRED sdl3)
+pkg_check_modules(SDL3_IMAGE REQUIRED sdl3-image)
+pkg_check_modules(SDL3_TTF REQUIRED sdl3-ttf)
+
+# Include directories
+include_directories(include ${SDL3_INCLUDE_DIRS} ${SDL3_IMAGE_INCLUDE_DIRS} ${SDL3_TTF_INCLUDE_DIRS})
 
 # Executable
 add_executable(expe3000 ${SOURCES})
 
 # Link libraries
-target_link_libraries(expe3000 PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf)
+target_link_libraries(expe3000 PRIVATE 
+    ${SDL3_LIBRARIES} 
+    ${SDL3_IMAGE_LIBRARIES} 
+    ${SDL3_TTF_LIBRARIES}
+)
 
 # Add compiler options
-target_compile_options(expe3000 PRIVATE -Wno-missing-field-initializers)
-
-# Installation/Runtime: Copy assets on build if needed (optional)
-# add_custom_command(TARGET expe3000 POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E copy_directory
-#    ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:expe3000>/assets)
+target_compile_options(expe3000 PRIVATE -Wno-missing-field-initializers ${SDL3_CFLAGS_OTHER} ${SDL3_IMAGE_CFLAGS_OTHER} ${SDL3_TTF_CFLAGS_OTHER})

@@ -24,6 +24,11 @@ A high-precision multimedia stimulus delivery system built with C and SDL3. Desi
 
 ## Compilation
 
+### Important Note on Build Directory
+It is highly recommended to perform an **out-of-source build** by creating a `build` directory. This keeps the source tree clean and avoids issues with temporary CMake files. 
+
+**Do not run `cmake .` in the root directory.** If you have already done so, it is recommended to delete the `CMakeFiles` folder and `CMakeCache.txt` file before proceeding with the steps below.
+
 ### Linux
 1. Install dependencies (e.g., on Ubuntu):
    ```bash

@@ -88,9 +88,11 @@ If you need the latest features or a specific version, follow these steps to bui
     ```bash
     cd /path/to/expe3000
     ```
-2.  **Configure and Build:**
+2.  **Configure and Build (Out-of-source):**
+    We use an "out-of-source" build to keep the root directory clean. 
+
     ```bash
-    mkdir build && cd build
+    mkdir -p build && cd build
     cmake ..
     make
     ```

@@ -99,12 +99,16 @@ Once the libraries are installed:
     ```bash
     cd expe3000
     ```
-2.  **Configure and Build:**
+2.  **Configure and Build (Out-of-source):**
+    It is highly recommended to build in a separate `build` directory to keep your source tree clean. Avoid running `cmake .` directly in the root.
+
     ```bash
-    mkdir build && cd build
+    mkdir -p build && cd build
     cmake ..
     make
     ```
+
+    The binary `expe3000` will be created in the `build/` directory.
 
 ## 5. Troubleshooting
 
