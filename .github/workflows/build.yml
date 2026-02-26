@@ -1,8 +1,9 @@
-name: Build expe3000
+name: Build and Release expe3000
 
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
 
@@ -16,61 +17,53 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          cmake \
-          pkg-config \
-          build-essential \
-          libasound2-dev \
-          libpulse-dev \
-          libdbus-1-dev \
-          libwayland-dev \
-          libx11-dev \
-          libxcursor-dev \
-          libxext-dev \
-          libxi-dev \
-          libxinerama-dev \
-          libxrandr-dev \
-          libxss-dev \
-          libxtst-dev \
-          libjpeg-dev \
-          libpng-dev \
-          libwebp-dev \
-          libfreetype6-dev \
-          libharfbuzz-dev
+          cmake pkg-config build-essential \
+          libasound2-dev libpulse-dev libdbus-1-dev libwayland-dev \
+          libx11-dev libxcursor-dev libxext-dev libxi-dev libxinerama-dev \
+          libxrandr-dev libxss-dev libxtst-dev libjpeg-dev libpng-dev \
+          libwebp-dev libfreetype6-dev libharfbuzz-dev
 
     - name: Build SDL3
       run: |
         git clone --depth 1 https://github.com/libsdl-org/SDL.git
-        cd SDL
-        mkdir build && cd build
+        cd SDL && mkdir build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release ..
-        make -j$(nproc)
-        sudo make install
+        cmake --build . -j$(nproc)
+        sudo cmake --install .
 
     - name: Build SDL3_image
       run: |
         git clone --depth 1 https://github.com/libsdl-org/SDL_image.git
-        cd SDL_image
-        mkdir build && cd build
+        cd SDL_image && mkdir build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release ..
-        make -j$(nproc)
-        sudo make install
+        cmake --build . -j$(nproc)
+        sudo cmake --install .
 
     - name: Build SDL3_ttf
       run: |
         git clone --depth 1 https://github.com/libsdl-org/SDL_ttf.git
-        cd SDL_ttf
-        mkdir build && cd build
+        cd SDL_ttf && mkdir build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release ..
-        make -j$(nproc)
-        sudo make install
+        cmake --build . -j$(nproc)
+        sudo cmake --install .
 
     - name: Configure and Build expe3000
       run: |
         sudo ldconfig
-        mkdir build
-        cd build
-        cmake ..
-        make
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
+
+    - name: Package Linux
+      run: |
+        mkdir -p release-linux
+        cp build/expe3000 release-linux/
+        tar -czvf expe3000-linux.tar.gz -C release-linux expe3000
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: expe3000-linux
+        path: expe3000-linux.tar.gz
 
   build-macos:
     runs-on: macos-latest
@@ -84,10 +77,20 @@ jobs:
 
     - name: Configure and Build
       run: |
-        mkdir build
-        cd build
-        cmake ..
-        make
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
+
+    - name: Package macOS
+      run: |
+        mkdir -p release-macos
+        cp build/expe3000 release-macos/
+        zip -j expe3000-macos.zip release-macos/expe3000
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: expe3000-macos
+        path: expe3000-macos.zip
 
   build-windows:
     runs-on: windows-latest
@@ -110,7 +113,45 @@ jobs:
     - name: Configure and Build
       shell: msys2 {0}
       run: |
-        mkdir build
-        cd build
-        cmake -G "MinGW Makefiles" ..
-        make
+        cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
+
+    - name: Package Windows (with DLLs)
+      shell: msys2 {0}
+      run: |
+        mkdir -p release-windows
+        cp build/expe3000.exe release-windows/
+        # Collect all required MinGW DLLs automatically
+        cp $(ldd build/expe3000.exe | grep /mingw64/bin | awk '{print $3}') release-windows/
+        zip -j expe3000-windows.zip release-windows/*
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: expe3000-windows
+        path: expe3000-windows.zip
+
+  create-release:
+    needs: [build-linux, build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/expe3000-linux.tar.gz
+            artifacts/expe3000-macos.zip
+            artifacts/expe3000-windows.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
