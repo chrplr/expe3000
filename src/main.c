@@ -141,11 +141,13 @@ int main(int argc, char *argv[]) {
         printf("  --font [file]        TTF font file for text stimuli\n");
         printf("  --font-size [pt]     Font size in points (default: 24)\n");
         printf("  --total-duration [ms] Minimum total experiment duration\n");
+        printf("  --no-vsync           Disable VSYNC (not recommended for timing)\n");
         return 1;
     }
 
     bool use_fixation = false;
     bool fullscreen = false;
+    bool vsync = true;
     int display_index = 0;
     int screen_w = 1920;
     int screen_h = 1080;
@@ -162,23 +164,18 @@ int main(int argc, char *argv[]) {
     time_t rawtime;
     time(&rawtime);
     char *timestamp_str = ctime(&rawtime);
-    timestamp_str[strlen(timestamp_str) - 1] = '\0'; // Remove newline
+    timestamp_str[strlen(timestamp_str) - 1] = '\0';
 
     char hostname[256] = "unknown";
     char username[256] = "unknown";
 #ifdef _WIN32
-    DWORD hlen = sizeof(hostname);
-    GetComputerNameA(hostname, &hlen);
-    DWORD ulen = sizeof(username);
-    GetUserNameA(username, &ulen);
+    DWORD hlen = sizeof(hostname); GetComputerNameA(hostname, &hlen);
+    DWORD ulen = sizeof(username); GetUserNameA(username, &ulen);
 #else
     gethostname(hostname, sizeof(hostname));
     char *login = getlogin();
     if (login) strncpy(username, login, sizeof(username) - 1);
-    else {
-        char *env_user = getenv("USER");
-        if (env_user) strncpy(username, env_user, sizeof(username) - 1);
-    }
+    else { char *env_user = getenv("USER"); if (env_user) strncpy(username, env_user, sizeof(username) - 1); }
 #endif
 
     char cmd_line[1024] = "";
@@ -189,11 +186,11 @@ int main(int argc, char *argv[]) {
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            printf("Usage: %s <stimuli_csv_file> [options]\n", argv[0]);
-            return 0;
+            printf("Usage: %s <stimuli_csv_file> [options]\n", argv[0]); return 0;
         }
         if (strcmp(argv[i], "--fixation") == 0) use_fixation = true;
         else if (strcmp(argv[i], "--fullscreen") == 0) fullscreen = true;
+        else if (strcmp(argv[i], "--no-vsync") == 0) vsync = false;
         else if (strcmp(argv[i], "--output") == 0 && i + 1 < argc) output_file = argv[++i];
         else if (strcmp(argv[i], "--display") == 0 && i + 1 < argc) display_index = atoi(argv[++i]);
         else if (strcmp(argv[i], "--res") == 0 && i + 1 < argc) sscanf(argv[++i], "%dx%d", &screen_w, &screen_h);
@@ -218,7 +215,9 @@ int main(int argc, char *argv[]) {
     if (fullscreen) window_flags |= SDL_WINDOW_FULLSCREEN;
     SDL_Window *window = SDL_CreateWindow("expe3000", screen_w, screen_h, window_flags);
     if (fullscreen) SDL_SetWindowPosition(window, SDL_WINDOWPOS_UNDEFINED_DISPLAY(target_display), SDL_WINDOWPOS_UNDEFINED_DISPLAY(target_display));
+    
     SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
+    if (vsync) SDL_SetRenderVSync(renderer, 1);
     SDL_SetRenderLogicalPresentation(renderer, screen_w, screen_h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
     display_splash(renderer, start_splash, screen_w, screen_h, scale_factor);
@@ -250,12 +249,18 @@ int main(int argc, char *argv[]) {
             SDL_Surface *surf = TTF_RenderText_Blended(font, exp->stimuli[i].file_path, 0, white);
             if (surf) {
                 resources[i].texture = SDL_CreateTextureFromSurface(renderer, surf);
-                resources[i].w = (float)surf->w;
-                resources[i].h = (float)surf->h;
+                resources[i].w = (float)surf->w; resources[i].h = (float)surf->h;
                 SDL_DestroySurface(surf);
             }
         }
     }
+
+    // Get Refresh Rate for predictive onset
+    float refresh_rate = 60.0f;
+    const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(target_display);
+    if (mode && mode->refresh_rate > 0) refresh_rate = mode->refresh_rate;
+    Uint64 frame_duration_ms = (Uint64)(1000.0f / refresh_rate);
+    Uint64 look_ahead_ms = frame_duration_ms / 2;
 
     EventLog log = {0};
     bool running = true;
@@ -274,12 +279,19 @@ int main(int argc, char *argv[]) {
                 else log_event(&log, current_time, "RESPONSE", SDL_GetKeyName(event.key.key));
             }
         }
-        if (current_stim < exp->count && current_time >= exp->stimuli[current_stim].timestamp_ms) {
+
+        bool needs_present = false;
+        bool triggered_onset = false;
+        int triggered_idx = -1;
+
+        // Predictive Trigger Logic (Preparation)
+        if (current_stim < exp->count && (current_time + look_ahead_ms) >= exp->stimuli[current_stim].timestamp_ms) {
             Stimulus *s = &exp->stimuli[current_stim];
             if ((s->type == STIM_IMAGE || s->type == STIM_TEXT) && resources[current_stim].texture) {
                 active_visual_idx = current_stim;
                 visual_end_time = current_time + s->duration_ms;
-                log_event(&log, current_time, (s->type == STIM_IMAGE ? "IMAGE_ONSET" : "TEXT_ONSET"), s->file_path);
+                triggered_onset = true;
+                triggered_idx = current_stim;
             } else if (s->type == STIM_SOUND && resources[current_stim].sound.data) {
                 SDL_LockMutex(mixer.mutex);
                 for (int j = 0; j < MAX_ACTIVE_SOUNDS; j++) {
@@ -295,71 +307,55 @@ int main(int argc, char *argv[]) {
             }
             current_stim++;
         }
+
         if (active_visual_idx != -1 && current_time >= visual_end_time) {
             log_event(&log, current_time, (exp->stimuli[active_visual_idx].type == STIM_IMAGE ? "IMAGE_OFFSET" : "TEXT_OFFSET"), exp->stimuli[active_visual_idx].file_path);
             active_visual_idx = -1;
+            needs_present = true;
         }
-        if (current_stim >= exp->count && active_visual_idx == -1 && current_time >= total_duration) {
-            running = false;
-        }
+
+        if (current_stim >= exp->count && active_visual_idx == -1 && current_time >= total_duration) running = false;
+
+        // Rendering
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         if (active_visual_idx != -1) {
             Resource *r = &resources[active_visual_idx];
             SDL_FRect dst_rect = {(screen_w - (r->w * scale_factor)) / 2.0f, (screen_h - (r->h * scale_factor)) / 2.0f, r->w * scale_factor, r->h * scale_factor};
             SDL_RenderTexture(renderer, r->texture, NULL, &dst_rect);
+            needs_present = true;
         } else if (use_fixation) {
             draw_fixation_cross(renderer, screen_w, screen_h);
+            needs_present = true;
         }
-        SDL_RenderPresent(renderer);
-        SDL_Delay(1);
+
+        SDL_RenderPresent(renderer); 
+        
+        // After Present returns (VSYNC occurred), log the onset for better accuracy
+        if (triggered_onset) {
+            Uint64 onset_time = SDL_GetTicks() - start_time;
+            log_event(&log, onset_time, (exp->stimuli[triggered_idx].type == STIM_IMAGE ? "IMAGE_ONSET" : "TEXT_ONSET"), exp->stimuli[triggered_idx].file_path);
+        }
+
+        if (!vsync) SDL_Delay(1);
     }
 
-    // Save Results with Metadata
     FILE *res_file = fopen(output_file, "w");
     if (res_file) {
-        fprintf(res_file, "# expe3000 Experiment Results\n");
-        fprintf(res_file, "# Date/Time: %s\n", timestamp_str);
-        fprintf(res_file, "# User/Host: %s@%s\n", username, hostname);
-        fprintf(res_file, "# Command Line: %s\n", cmd_line);
-        fprintf(res_file, "# Platform: %s\n", SDL_GetPlatform());
-        fprintf(res_file, "# Video Driver: %s\n", SDL_GetCurrentVideoDriver());
-        fprintf(res_file, "# Renderer: %s\n", SDL_GetRendererName(renderer));
-        
-        const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(target_display);
-        if (mode) {
-            fprintf(res_file, "# Display Resolution: %dx%d @ %.2fHz\n", mode->w, mode->h, mode->refresh_rate);
-        }
-        
+        fprintf(res_file, "# expe3000 Experiment Results\n# Date/Time: %s\n# User/Host: %s@%s\n# Command Line: %s\n", timestamp_str, username, hostname, cmd_line);
+        fprintf(res_file, "# Platform: %s\n# Video Driver: %s\n# Renderer: %s (VSYNC: %s)\n", SDL_GetPlatform(), SDL_GetCurrentVideoDriver(), SDL_GetRendererName(renderer), vsync ? "ON" : "OFF");
+        if (mode) fprintf(res_file, "# Display Resolution: %dx%d @ %.2fHz\n", mode->w, mode->h, mode->refresh_rate);
         int version = SDL_GetVersion();
-        fprintf(res_file, "# SDL Version: %d.%d.%d\n", SDL_VERSIONNUM_MAJOR(version), SDL_VERSIONNUM_MINOR(version), SDL_VERSIONNUM_MICRO(version));
-        fprintf(res_file, "# Logical Resolution: %dx%d\n", screen_w, screen_h);
-        fprintf(res_file, "# Scale Factor: %.2f\n", scale_factor);
-        fprintf(res_file, "# \n");
-        
+        fprintf(res_file, "# SDL Version: %d.%d.%d\n# Logical Resolution: %dx%d\n# Scale Factor: %.2f\n# \n", SDL_VERSIONNUM_MAJOR(version), SDL_VERSIONNUM_MINOR(version), SDL_VERSIONNUM_MICRO(version), screen_w, screen_h, scale_factor);
         fprintf(res_file, "timestamp_ms,event_type,label\n");
-        for (int i = 0; i < log.count; i++) {
-            fprintf(res_file, "%lu,%s,%s\n", (unsigned long)log.entries[i].timestamp_ms, log.entries[i].type, log.entries[i].label);
-        }
+        for (int i = 0; i < log.count; i++) fprintf(res_file, "%lu,%s,%s\n", (unsigned long)log.entries[i].timestamp_ms, log.entries[i].type, log.entries[i].label);
         fclose(res_file);
-        SDL_Log("Results saved to %s", output_file);
     }
 
     display_splash(renderer, end_splash, screen_w, screen_h, scale_factor);
-
     if (font) TTF_CloseFont(font);
-    free(log.entries);
-    SDL_DestroyAudioStream(master_stream);
-    for (int i = 0; i < exp->count; i++) {
-        if (resources[i].texture) SDL_DestroyTexture(resources[i].texture);
-        if (resources[i].sound.data) SDL_free(resources[i].sound.data);
-    }
-    free(resources);
-    free_experiment(exp);
-    SDL_DestroyMutex(mixer.mutex);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    TTF_Quit();
-    SDL_Quit();
+    free(log.entries); SDL_DestroyAudioStream(master_stream);
+    for (int i = 0; i < exp->count; i++) { if (resources[i].texture) SDL_DestroyTexture(resources[i].texture); if (resources[i].sound.data) SDL_free(resources[i].sound.data); }
+    free(resources); free_experiment(exp); SDL_DestroyMutex(mixer.mutex); SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); TTF_Quit(); SDL_Quit();
     return 0;
 }
