@@ -35,7 +35,7 @@ jobs:
       run: |
         git clone --depth 1 https://github.com/libsdl-org/SDL_image.git
         cd SDL_image && mkdir build && cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
+        cmake -DCMAKE_BUILD_TYPE=Release ..
         cmake --build .
         sudo cmake --install .
 
@@ -43,7 +43,7 @@ jobs:
       run: |
         git clone --depth 1 https://github.com/libsdl-org/SDL_ttf.git
         cd SDL_ttf && mkdir build && cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
+        cmake -DCMAKE_BUILD_TYPE=Release ..
         cmake --build .
         sudo cmake --install .
 
@@ -106,11 +106,11 @@ jobs:
           mingw-w64-x86_64-toolchain
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-ninja
-          mingw-w64-x86_64-zip
           mingw-w64-x86_64-sdl3
           mingw-w64-x86_64-sdl3-image
           mingw-w64-x86_64-sdl3-ttf
           mingw-w64-x86_64-pkgconf
+          zip
 
     - name: Configure and Build
       shell: msys2 {0}
