@@ -1,0 +1,116 @@
+name: Build expe3000
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          pkg-config \
+          build-essential \
+          libasound2-dev \
+          libpulse-dev \
+          libdbus-1-dev \
+          libwayland-dev \
+          libx11-dev \
+          libxcursor-dev \
+          libxext-dev \
+          libxi-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libxss-dev \
+          libxtst-dev \
+          libjpeg-dev \
+          libpng-dev \
+          libwebp-dev \
+          libfreetype6-dev \
+          libharfbuzz-dev
+
+    - name: Build SDL3
+      run: |
+        git clone --depth 1 https://github.com/libsdl-org/SDL.git
+        cd SDL
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        make -j$(nproc)
+        sudo make install
+
+    - name: Build SDL3_image
+      run: |
+        git clone --depth 1 https://github.com/libsdl-org/SDL_image.git
+        cd SDL_image
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        make -j$(nproc)
+        sudo make install
+
+    - name: Build SDL3_ttf
+      run: |
+        git clone --depth 1 https://github.com/libsdl-org/SDL_ttf.git
+        cd SDL_ttf
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        make -j$(nproc)
+        sudo make install
+
+    - name: Configure and Build expe3000
+      run: |
+        sudo ldconfig
+        mkdir build
+        cd build
+        cmake ..
+        make
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Dependencies
+      run: |
+        brew update
+        brew install sdl3 sdl3_image sdl3_ttf cmake pkg-config
+
+    - name: Configure and Build
+      run: |
+        mkdir build
+        cd build
+        cmake ..
+        make
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-sdl3
+          mingw-w64-x86_64-sdl3_image
+          mingw-w64-x86_64-sdl3_ttf
+          mingw-w64-x86_64-pkg-config
+
+    - name: Configure and Build
+      shell: msys2 {0}
+      run: |
+        mkdir build
+        cd build
+        cmake -G "MinGW Makefiles" ..
+        make
