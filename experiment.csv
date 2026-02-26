@@ -1,0 +1,8 @@
+# timestamp_ms,duration_ms,type,content
+1000,500,IMAGE,assets/image1.png
+2000,0,SOUND,assets/sound1.wav
+3000,1000,TEXT,Prepare for the next task
+5000,500,IMAGE,assets/image2.png
+6000,1500,TEXT,Did you see the image?
+8000,0,SOUND,assets/sound2.wav
+9000,2000,TEXT,Experiment Complete. Press any key to finish.
