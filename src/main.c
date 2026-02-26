@@ -649,6 +649,7 @@ int main(int argc, const char **argv) {
         TTF_Quit(); SDL_Quit();
         return 1;
     }
+    SDL_HideCursor();
     if (cfg.fullscreen)
         SDL_SetWindowPosition(window,
             SDL_WINDOWPOS_UNDEFINED_DISPLAY(target_display),
