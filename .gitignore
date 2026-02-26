@@ -2,4 +2,5 @@ results.csv
 *.swp
 *.~
 *.o
+CMakeFiles/
 

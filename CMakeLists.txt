@@ -24,6 +24,9 @@ add_executable(expe3000 ${SOURCES})
 # Link libraries
 target_link_libraries(expe3000 PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf)
 
+# Add compiler options
+target_compile_options(expe3000 PRIVATE -Wno-missing-field-initializers)
+
 # Installation/Runtime: Copy assets on build if needed (optional)
 # add_custom_command(TARGET expe3000 POST_BUILD
 #    COMMAND ${CMAKE_COMMAND} -E copy_directory

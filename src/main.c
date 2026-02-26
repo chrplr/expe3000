@@ -519,10 +519,19 @@ static void run_experiment(const Config *cfg, Experiment *exp, Resource *resourc
 /* ─── Entry Point ────────────────────────────────────────────── */
 
 int main(int argc, const char **argv) {
-    Config cfg;
-    if (!parse_args(argc, argv, &cfg)) return 1;
+    /* ── Metadata capture ── must happen before parse_args, because
+       argparse_parse rewrites argc/argv in-place (stripping flags),
+       which would cause the cmd_line loop to walk off the end of the
+       repacked array and segfault. */
 
-    /* ── Metadata capture ── */
+    /* Build the raw command line from the original argc/argv. */
+    char cmd_line[1024] = "";
+    for (int i = 0; i < argc; i++) {
+        strncat(cmd_line, argv[i], sizeof(cmd_line) - strlen(cmd_line) - 1);
+        if (i < argc - 1)
+            strncat(cmd_line, " ", sizeof(cmd_line) - strlen(cmd_line) - 1);
+    }
+
     time_t rawtime;
     time(&rawtime);
     char timestamp_str[64];
@@ -549,12 +558,10 @@ int main(int argc, const char **argv) {
     }
 #endif
 
-    char cmd_line[1024] = "";
-    for (int i = 0; i < argc; i++) {
-        strncat(cmd_line, argv[i], sizeof(cmd_line) - strlen(cmd_line) - 1);
-        if (i < argc - 1)
-            strncat(cmd_line, " ", sizeof(cmd_line) - strlen(cmd_line) - 1);
-    }
+    /* Parse arguments — this mutates argc/argv, so it must come after
+       the cmd_line and metadata capture above. */
+    Config cfg;
+    if (!parse_args(argc, argv, &cfg)) return 1;
 
     /* ── SDL Initialisation ── */
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
