@@ -17,7 +17,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          cmake pkg-config build-essential \
+          cmake pkg-config build-essential ninja-build \
           libasound2-dev libpulse-dev libdbus-1-dev libwayland-dev \
           libx11-dev libxcursor-dev libxext-dev libxi-dev libxinerama-dev \
           libxrandr-dev libxss-dev libxtst-dev libjpeg-dev libpng-dev \
@@ -27,30 +27,30 @@ jobs:
       run: |
         git clone --depth 1 https://github.com/libsdl-org/SDL.git
         cd SDL && mkdir build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release ..
-        cmake --build . -j$(nproc)
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build .
         sudo cmake --install .
 
     - name: Build SDL3_image
       run: |
         git clone --depth 1 https://github.com/libsdl-org/SDL_image.git
         cd SDL_image && mkdir build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release ..
-        cmake --build . -j$(nproc)
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build .
         sudo cmake --install .
 
     - name: Build SDL3_ttf
       run: |
         git clone --depth 1 https://github.com/libsdl-org/SDL_ttf.git
         cd SDL_ttf && mkdir build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release ..
-        cmake --build . -j$(nproc)
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build .
         sudo cmake --install .
 
     - name: Configure and Build expe3000
       run: |
         sudo ldconfig
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
         cmake --build build
 
     - name: Package Linux
@@ -73,11 +73,11 @@ jobs:
     - name: Install Dependencies
       run: |
         brew update
-        brew install sdl3 sdl3_image sdl3_ttf cmake pkg-config
+        brew install sdl3 sdl3_image sdl3_ttf cmake pkg-config ninja
 
     - name: Configure and Build
       run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
         cmake --build build
 
     - name: Package macOS
@@ -105,6 +105,7 @@ jobs:
         install: >-
           mingw-w64-x86_64-toolchain
           mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
           mingw-w64-x86_64-sdl3
           mingw-w64-x86_64-sdl3-image
           mingw-w64-x86_64-sdl3-ttf
@@ -113,7 +114,7 @@ jobs:
     - name: Configure and Build
       shell: msys2 {0}
       run: |
-        cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
         cmake --build build
 
     - name: Package Windows (with DLLs)
