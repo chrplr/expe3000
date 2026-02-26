@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 $(shell pkg-config --cflags sdl3 sdl3-image sdl3-ttf) -Iinclude
+CFLAGS = -Wall -Wno-missing-field-initializers -Wextra -O2 $(shell pkg-config --cflags sdl3 sdl3-image sdl3-ttf) -Iinclude
 LIBS = $(shell pkg-config --libs sdl3 sdl3-image sdl3-ttf)
 
 SRC = $(wildcard src/*.c)
