@@ -26,6 +26,7 @@
 #include <time.h>
 #include "csv_parser.h"
 #include "argparse.h"
+#include "version.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -246,12 +247,14 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
     int         no_vsync        = 0;
     int         use_fixation    = 0;
     int         fullscreen      = 0;
+    int         show_version    = 0;
     const char *scale_str       = NULL;
     const char *duration_str    = NULL;
     const char *res_str         = NULL;
 
     struct argparse_option options[] = {
         OPT_HELP(),
+        OPT_BOOLEAN('v', "version",        &show_version,      "show version and exit"),
         OPT_GROUP("Output"),
         OPT_STRING ('o', "output",         &cfg->output_file,  "output log file (default: results.csv)"),
         OPT_GROUP("Display"),
@@ -280,6 +283,11 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
         "\nThe CSV stimulus file is the only required argument.");
 
     argc = argparse_parse(&ap, argc, argv);
+
+    if (show_version) {
+        printf("expe3000 version %s\n", EXPE3000_VERSION);
+        exit(EXIT_SUCCESS);
+    }
 
     /* First remaining positional argument is the CSV file */
     if (argc > 0)

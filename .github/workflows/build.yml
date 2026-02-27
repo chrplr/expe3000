@@ -65,6 +65,40 @@ jobs:
         name: expe3000-linux
         path: expe3000-linux.tar.gz
 
+  tag-release:
+    needs: build-linux
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract version
+      id: get_version
+      run: |
+        VERSION=$(grep "EXPE3000_VERSION" include/version.h | cut -d '"' -f 2)
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Check if tag exists
+      id: check_tag
+      run: |
+        if git rev-parse "${{ steps.get_version.outputs.VERSION }}" >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create and push tag
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag ${{ steps.get_version.outputs.VERSION }}
+        git push origin ${{ steps.get_version.outputs.VERSION }}
+
   build-macos:
     runs-on: macos-latest
     steps:
@@ -134,8 +168,8 @@ jobs:
         path: expe3000-windows.zip
 
   create-release:
-    needs: [build-linux, build-macos, build-windows]
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-linux, build-macos, build-windows, tag-release]
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       contents: write
