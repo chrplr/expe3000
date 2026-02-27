@@ -95,17 +95,16 @@ cd ../..
 
 Once the libraries are installed:
 
-1.  **Navigate to the project directory:**
-    ```bash
-    cd expe3000
-    ```
-2.  **Configure and Build (Out-of-source):**
-    It is highly recommended to build in a separate `build` directory to keep your source tree clean. Avoid running `cmake .` directly in the root.
+1.  **Navigate to the project directory.**
+2.  **Configure and Build:**
+    It is highly recommended to perform an **out-of-source build**. Using `Ninja` is recommended for faster builds if you installed it.
 
     ```bash
-    mkdir -p build && cd build
-    cmake ..
-    make
+    # Configure
+    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+    # Build
+    cmake --build build
     ```
 
     The binary `expe3000` will be created in the `build/` directory.

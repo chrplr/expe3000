@@ -14,87 +14,63 @@ This guide provides step-by-step instructions for setting up a MinGW-w64 environ
     ```bash
     pacman -Syu
     ```
-    *(If the terminal closes, restart it and run the command again until everything is up to date.)*
 4.  **Install the Toolchain and Build Tools:**
     ```bash
-    pacman -S --needed base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake git
+    pacman -S --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-pkgconf git
     ```
-5.  **Install Dependencies for SDL3 Satellites:**
-    SDL3_image and SDL3_ttf require additional libraries (like libpng, freetype, etc.):
+5.  **Install SDL3 and Dependencies:**
+    SDL3 and its satellite libraries are now available directly in the MSYS2 repositories:
     ```bash
-    pacman -S --needed mingw-w64-x86_64-libpng mingw-w64-x86_64-libjpeg-turbo mingw-w64-x86_64-libwebp mingw-w64-x86_64-freetype mingw-w64-x86_64-harfbuzz
+    pacman -S --needed mingw-w64-x86_64-sdl3 mingw-w64-x86_64-sdl3-image mingw-w64-x86_64-sdl3-ttf
     ```
 
 ---
 
-## 2. Compiling SDL3 from Source
+## 2. Compiling expe3000
 
-Since SDL3 is in active development, compiling from the latest source is often necessary.
+With the dependencies installed, you can build the main project using CMake and Ninja.
 
-1.  **Clone the SDL3 repository:**
-    ```bash
-    git clone https://github.com/libsdl-org/SDL.git
-    cd SDL
-    ```
+1.  **Navigate to the project directory.**
 2.  **Configure and Build:**
     ```bash
-    mkdir build && cd build
-    cmake -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 ..
-    cmake --build . -j$(nproc)
-    cmake --install .
-    cd ../..
+    # Configure
+    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+    # Build
+    cmake --build build
     ```
 
 ---
 
-## 3. Compiling SDL3 Satellite Libraries
+## 3. Compiling SDL3 from Source (Optional)
 
-### SDL3_image
-1.  **Clone and Build:**
-    ```bash
-    git clone https://github.com/libsdl-org/SDL_image.git
-    cd SDL_image
-    mkdir build && cd build
-    cmake -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 ..
-    cmake --build . -j$(nproc)
-    cmake --install .
-    cd ../..
-    ```
+If you need a version newer than what is in `pacman`, you can still build from source:
 
-### SDL3_ttf
-1.  **Clone and Build:**
-    ```bash
-    git clone https://github.com/libsdl-org/SDL_ttf.git
-    cd SDL_ttf
-    mkdir build && cd build
-    cmake -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 ..
-    cmake --build . -j$(nproc)
-    cmake --install .
-    cd ../..
-    ```
+### Build SDL3 Core
+```bash
+git clone https://github.com/libsdl-org/SDL.git
+cmake -B SDL/build -S SDL -G Ninja -DCMAKE_INSTALL_PREFIX=/mingw64 -DCMAKE_BUILD_TYPE=Release
+cmake --build SDL/build
+cmake --install SDL/build
+```
+
+*(Follow similar steps for SDL3_image and SDL3_ttf if needed.)*
 
 ---
 
-## 4. Compiling expe3000
-
-Now that the dependencies are installed in your `/mingw64` prefix, you can build the main project.
-
-1.  **Navigate to the project directory:**
-    ```bash
-    cd /path/to/expe3000
-    ```
-2.  **Configure and Build:**
-    ```bash
-    mkdir build && cd build
-    cmake -G "MinGW Makefiles" ..
-    cmake --build .
-    ```
-
-## 5. Running the Program
+## 4. Running the Program
 
 After a successful build, the executable `expe3000.exe` will be in the `build` folder.
 
 **Note on DLLs:** Since you linked against shared libraries, the SDL3 DLLs must be in your PATH or in the same folder as the executable. If you are running from the MSYS2 MinGW 64-bit terminal, they are already in your PATH (`/mingw64/bin`).
+
+### Distributing your build
+To run the `.exe` outside of the MSYS2 terminal, you need to copy the required DLLs to the same folder as the executable. You can find them in `/mingw64/bin/`. At a minimum, you will usually need:
+- `SDL3.dll`
+- `SDL3_image.dll`
+- `SDL3_ttf.dll`
+- `libwinpthread-1.dll`
+- `libgcc_s_seh-1.dll` (or similar depending on your toolchain)
 
 To run it:
 ```bash

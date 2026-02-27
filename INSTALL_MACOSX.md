@@ -84,17 +84,16 @@ If you need the latest features or a specific version, follow these steps to bui
 
 ## 4. Compiling expe3000
 
-1.  **Navigate to the project directory:**
-    ```bash
-    cd /path/to/expe3000
-    ```
-2.  **Configure and Build (Out-of-source):**
-    We use an "out-of-source" build to keep the root directory clean. 
+1.  **Navigate to the project directory.**
+2.  **Configure and Build:**
+    We use an "out-of-source" build to keep the root directory clean. If you installed `ninja`, you can use it for faster builds.
 
     ```bash
-    mkdir -p build && cd build
-    cmake ..
-    make
+    # Configure
+    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+    # Build
+    cmake --build build
     ```
 
 ## 5. Running the Program
