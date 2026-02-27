@@ -21,6 +21,26 @@ For detailed installation and compilation instructions, please refer to the guid
 - [macOS](INSTALL_MACOSX.md)
 - [Windows](INSTALL_Windows.md)
 
+## Dependencies
+
+The pre-compiled binaries for **Windows** are self-contained and include all necessary DLLs. 
+
+For **Linux** and **macOS**, you need to have the SDL3 libraries installed on your system to run the program:
+
+### macOS
+Install via [Homebrew](https://brew.sh/):
+```bash
+brew install sdl3 sdl3_image sdl3_ttf
+```
+
+### Linux
+Install via your package manager (if available):
+- **Ubuntu 24.10+ / Debian Trixie+**: `sudo apt install libsdl3-0 libsdl3-image-0 libsdl3-ttf-0`
+- **Fedora 41+**: `sudo dnf install sdl3 sdl3_image sdl3_ttf`
+- **Arch Linux**: `sudo pacman -S sdl3 sdl3_image sdl3_ttf`
+
+*Note: If your distribution does not yet provide SDL3 packages, you may need to [compile them from source](INSTALL_Linux.md#3-option-b-compiling-sdl3-from-source-universal).*
+
 ## Usage
 
 ```bash
