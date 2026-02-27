@@ -162,35 +162,167 @@ void dlp_unset(dlp_io8g_t* dlp, const char* lines) {
 }
 
 #else
-/* Windows stubs */
+/* Windows implementation */
 #include <windows.h>
 
+/* Redefine dlp_io8g_t for Windows to use HANDLE */
+typedef struct {
+    HANDLE hSerial;
+} dlp_io8g_win_t;
+
 dlp_io8g_t* dlp_new(const char* device, int baudrate) {
-    (void)device; (void)baudrate;
-    fprintf(stderr, "DLP trigger support is not yet implemented on Windows.\n");
-    return NULL;
+    char full_device[64];
+    // COM ports higher than 9 need the \\.\ prefix
+    if (strncmp(device, "COM", 3) == 0) {
+        snprintf(full_device, sizeof(full_device), "\\\\.\\%s", device);
+    } else {
+        strncpy(full_device, device, sizeof(full_device) - 1);
+    }
+
+    HANDLE hSerial = CreateFileA(full_device,
+                                GENERIC_READ | GENERIC_WRITE,
+                                0,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL,
+                                NULL);
+
+    if (hSerial == INVALID_HANDLE_VALUE) {
+        fprintf(stderr, "Error opening serial port %s\n", device);
+        return NULL;
+    }
+
+    DCB dcbSerialParams = {0};
+    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+    if (!GetCommState(hSerial, &dcbSerialParams)) {
+        fprintf(stderr, "Error getting device state\n");
+        CloseHandle(hSerial);
+        return NULL;
+    }
+
+    dcbSerialParams.BaudRate = baudrate;
+    dcbSerialParams.ByteSize = 8;
+    dcbSerialParams.StopBits = ONESTOPBIT;
+    dcbSerialParams.Parity   = NOPARITY;
+    dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE; // O_SYNC equivalent-ish
+
+    if (!SetCommState(hSerial, &dcbSerialParams)) {
+        fprintf(stderr, "Error setting device state\n");
+        CloseHandle(hSerial);
+        return NULL;
+    }
+
+    COMMTIMEOUTS timeouts = {0};
+    timeouts.ReadIntervalTimeout         = 50;
+    timeouts.ReadTotalTimeoutConstant    = 500;
+    timeouts.ReadTotalTimeoutMultiplier  = 10;
+    timeouts.WriteTotalTimeoutConstant   = 50;
+    timeouts.WriteTotalTimeoutMultiplier = 10;
+
+    if (!SetCommTimeouts(hSerial, &timeouts)) {
+        fprintf(stderr, "Error setting timeouts\n");
+        CloseHandle(hSerial);
+        return NULL;
+    }
+
+    dlp_io8g_t* dlp = (dlp_io8g_t*)malloc(sizeof(dlp_io8g_t));
+    if (!dlp) {
+        CloseHandle(hSerial);
+        return NULL;
+    }
+    /* We reuse the fd int to store the HANDLE on Windows. 
+       This is hacky but avoids changing dlp_io8g_t in dlp.h which 
+       would require more refactoring. */
+    dlp->fd = (intptr_t)hSerial;
+
+    // Ping
+    unsigned char ping_cmd = 0x27;
+    DWORD written;
+    if (!WriteFile(hSerial, &ping_cmd, 1, &written, NULL) || written != 1) {
+        fprintf(stderr, "Error writing ping\n");
+        dlp_close(dlp);
+        return NULL;
+    }
+
+    unsigned char buff[1];
+    DWORD read_bytes;
+    if (!ReadFile(hSerial, buff, 1, &read_bytes, NULL) || read_bytes != 1 || buff[0] != 'Q') {
+        fprintf(stderr, "Device did not respond to ping correctly\n");
+        dlp_close(dlp);
+        return NULL;
+    }
+
+    // Binary mode
+    unsigned char binary_cmd = 0x5C;
+    WriteFile(hSerial, &binary_cmd, 1, &written, NULL);
+
+    return dlp;
 }
 
 void dlp_close(dlp_io8g_t* dlp) {
-    (void)dlp;
+    if (dlp) {
+        CloseHandle((HANDLE)(intptr_t)dlp->fd);
+        free(dlp);
+    }
 }
 
 bool dlp_ping(dlp_io8g_t* dlp) {
-    (void)dlp;
-    return false;
+    if (!dlp) return false;
+    unsigned char ping_cmd = 0x27;
+    DWORD written, read_bytes;
+    unsigned char buff[1];
+    HANDLE h = (HANDLE)(intptr_t)dlp->fd;
+    if (!WriteFile(h, &ping_cmd, 1, &written, NULL)) return false;
+    if (!ReadFile(h, buff, 1, &read_bytes, NULL)) return false;
+    return (read_bytes == 1 && buff[0] == 'Q');
 }
 
 size_t dlp_read(dlp_io8g_t* dlp, unsigned char* states) {
-    (void)dlp; (void)states;
-    return 0;
+    if (!dlp) return 0;
+    const char* cmds = "ASDFGHJK";
+    HANDLE h = (HANDLE)(intptr_t)dlp->fd;
+    PurgeComm(h, PURGE_RXCLEAR | PURGE_TXCLEAR);
+    
+    DWORD written;
+    if (!WriteFile(h, cmds, 8, &written, NULL)) return 0;
+
+    DWORD total_read = 0;
+    while (total_read < 8) {
+        DWORD n;
+        if (!ReadFile(h, states + total_read, 8 - total_read, &n, NULL) || n == 0) break;
+        total_read += n;
+    }
+    return (size_t)total_read;
 }
 
 void dlp_set(dlp_io8g_t* dlp, const char* lines) {
-    (void)dlp; (void)lines;
+    if (!dlp) return;
+    HANDLE h = (HANDLE)(intptr_t)dlp->fd;
+    DWORD written;
+    WriteFile(h, lines, (DWORD)strlen(lines), &written, NULL);
 }
 
 void dlp_unset(dlp_io8g_t* dlp, const char* lines) {
-    (void)dlp; (void)lines;
+    if (!dlp) return;
+    HANDLE h = (HANDLE)(intptr_t)dlp->fd;
+    char* cmd = _strdup(lines);
+    if (!cmd) return;
+
+    for (int i = 0; cmd[i]; i++) {
+        switch (cmd[i]) {
+            case '1': cmd[i] = 'Q'; break;
+            case '2': cmd[i] = 'W'; break;
+            case '3': cmd[i] = 'E'; break;
+            case '4': cmd[i] = 'R'; break;
+            case '5': cmd[i] = 'T'; break;
+            case '6': cmd[i] = 'Y'; break;
+            case '7': cmd[i] = 'U'; break;
+            case '8': cmd[i] = 'I'; break;
+        }
+    }
+    DWORD written;
+    WriteFile(h, cmd, (DWORD)strlen(cmd), &written, NULL);
+    free(cmd);
 }
 
 #endif
