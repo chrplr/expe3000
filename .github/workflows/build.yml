@@ -67,8 +67,10 @@ jobs:
 
   tag-release:
     needs: build-linux
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
     permissions:
       contents: write
     steps:
@@ -92,7 +94,7 @@ jobs:
         fi
 
     - name: Create and push tag
-      if: steps.check_tag.outputs.exists == 'false'
+      if: github.ref == 'refs/heads/main' && steps.check_tag.outputs.exists == 'false'
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -183,6 +185,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.tag-release.outputs.version }}
           files: |
             artifacts/expe3000-linux.tar.gz
             artifacts/expe3000-macos.zip
