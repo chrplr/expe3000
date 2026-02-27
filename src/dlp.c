@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifndef _WIN32
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
@@ -158,3 +160,37 @@ void dlp_unset(dlp_io8g_t* dlp, const char* lines) {
     }
     free(cmd);
 }
+
+#else
+/* Windows stubs */
+#include <windows.h>
+
+dlp_io8g_t* dlp_new(const char* device, int baudrate) {
+    (void)device; (void)baudrate;
+    fprintf(stderr, "DLP trigger support is not yet implemented on Windows.\n");
+    return NULL;
+}
+
+void dlp_close(dlp_io8g_t* dlp) {
+    (void)dlp;
+}
+
+bool dlp_ping(dlp_io8g_t* dlp) {
+    (void)dlp;
+    return false;
+}
+
+size_t dlp_read(dlp_io8g_t* dlp, unsigned char* states) {
+    (void)dlp; (void)states;
+    return 0;
+}
+
+void dlp_set(dlp_io8g_t* dlp, const char* lines) {
+    (void)dlp; (void)lines;
+}
+
+void dlp_unset(dlp_io8g_t* dlp, const char* lines) {
+    (void)dlp; (void)lines;
+}
+
+#endif
