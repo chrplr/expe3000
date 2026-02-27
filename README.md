@@ -59,7 +59,7 @@ The experiment file should be a CSV (comma-separated) with the following columns
 
 ### Example Command
 ```bash
-./expe3000 experiment.csv --fullscreen --fixation --font assets/Roboto.ttf --font-size 32 --start-splash assets/welcome.png
+./expe3000 experiment.csv --fullscreen --fixation --start-splash assets/welcome.png
 ```
 
 ## Output
