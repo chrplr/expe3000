@@ -102,7 +102,7 @@ The executable `expe3000` will be created in the `build` directory.
 
 To run it:
 ```bash
-./expe3000 ../experiment.csv --font ../assets/arial.ttf
+./expe3000 ../experiment.csv
 ```
 
 **Note on Permissions:** macOS may ask for permission to access certain folders or record the screen/input. Ensure you grant these if prompted for the experiment to function correctly.

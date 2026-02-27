@@ -74,5 +74,5 @@ To run the `.exe` outside of the MSYS2 terminal, you need to copy the required D
 
 To run it:
 ```bash
-./expe3000.exe ../experiment.csv --font ../assets/arial.ttf
+./expe3000.exe ../experiment.csv
 ```
