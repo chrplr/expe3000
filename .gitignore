@@ -3,4 +3,5 @@ results.csv
 *.~
 *.o
 CMakeFiles/
+build/
 

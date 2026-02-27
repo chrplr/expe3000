@@ -1,6 +1,6 @@
 # expe3000
 
-A high-precision multimedia stimulus delivery system built with C and SDL3. Designed for experimental psychology and neuroscience tasks requiring millisecond-accurate timing and low-latency audio.
+A multimedia stimulus delivery system built with C and SDL3. Designed for experimental psychology and neuroscience tasks requiring millisecond-accurate timing and low-latency audio.
 
 ## Features
 - **Precise Timing:** High-resolution timing loop with VSYNC synchronization and predictive onset look-ahead (pre-rendering).
@@ -11,9 +11,28 @@ A high-precision multimedia stimulus delivery system built with C and SDL3. Desi
 - **Advanced Display Options:** Supports multiple monitors, custom resolutions, logical scaling, and magnification factors.
 - **Auto-exit:** Automatically concludes the experiment after the last stimulus or a specified total duration.
 
-## Installation
+## Installing Binaries
 
 Pre-compiled binaries for Linux, macOS, and Windows are available in the [Releases](https://github.com/chrplr/expe3000/releases) section of the GitHub project.
+
+### Dependencies
+
+The pre-compiled binaries for **Windows** are self-contained and include all necessary DLLs. 
+
+For **Linux** and **macOS**, you need to have the SDL3 libraries installed on your system to run the program:
+
+* *MacOS*. Install via [Homebrew](https://brew.sh/):
+   ```bash
+   brew install sdl3 sdl3_image sdl3_ttf
+   ```
+* *Linux*. Install via your package manager (if available):
+      - **Ubuntu 24.10+ / Debian Trixie+**: `sudo apt install libsdl3-0 libsdl3-image-0 libsdl3-ttf-0`
+      - **Fedora 41+**: `sudo dnf install sdl3 sdl3_image sdl3_ttf`
+      - **Arch Linux**: `sudo pacman -S sdl3 sdl3_image sdl3_ttf`
+
+   *Note: If your distribution does not yet provide SDL3 packages, you may need to compile them from source(INSTALL_Linux.md#3-option-b-compiling-sdl3-from-source-universal).*
+
+## Compilation
 
 For detailed installation and compilation instructions, please refer to the guide for your operating system:
 
@@ -21,31 +40,28 @@ For detailed installation and compilation instructions, please refer to the guid
 - [macOS](INSTALL_MACOSX.md)
 - [Windows](INSTALL_Windows.md)
 
-## Dependencies
-
-The pre-compiled binaries for **Windows** are self-contained and include all necessary DLLs. 
-
-For **Linux** and **macOS**, you need to have the SDL3 libraries installed on your system to run the program:
-
-### macOS
-Install via [Homebrew](https://brew.sh/):
-```bash
-brew install sdl3 sdl3_image sdl3_ttf
-```
-
-### Linux
-Install via your package manager (if available):
-- **Ubuntu 24.10+ / Debian Trixie+**: `sudo apt install libsdl3-0 libsdl3-image-0 libsdl3-ttf-0`
-- **Fedora 41+**: `sudo dnf install sdl3 sdl3_image sdl3_ttf`
-- **Arch Linux**: `sudo pacman -S sdl3 sdl3_image sdl3_ttf`
-
-*Note: If your distribution does not yet provide SDL3 packages, you may need to [compile them from source](INSTALL_Linux.md#3-option-b-compiling-sdl3-from-source-universal).*
 
 ## Usage
 
 ```bash
 ./expe3000 <experiment_csv> [options]
 ```
+
+### Format of the csv file describing the events
+The experiment file should be a CSV (comma-separated) with the following columns:
+`timestamp_ms,duration_ms,type,content`
+
+**Types:** `IMAGE`, `SOUND`, `TEXT`
+
+**Example (`experiment.csv`):**
+```csv
+# timestamp, duration, type, content
+1000,500,IMAGE,assets/target.png
+2000,0,SOUND,assets/beep.wav
+3000,1500,TEXT,Bye
+```
+*Note: Use `0` duration for sounds.*
+
 
 ### Options
 - `-h, --help`: Show help message.
@@ -62,27 +78,17 @@ Install via your package manager (if available):
 - `--font-size [pt]`: Set the font size in points (default: 24).
 - `--no-vsync`: Disable VSYNC synchronization (not recommended for precise timing).
 
-### CSV Format
-The experiment file should be a CSV (comma-separated) with the following columns:
-`timestamp_ms,duration_ms,type,content`
-
-**Types:** `IMAGE`, `SOUND`, `TEXT`
-
-**Example (`experiment.csv`):**
-```csv
-# timestamp, duration, type, content
-1000,500,IMAGE,assets/target.png
-2000,0,SOUND,assets/beep.wav
-3000,1500,TEXT,Please press the space bar
-```
-*Note: Use `0` duration for sounds.*
 
 ### Example Command
 ```bash
 ./expe3000 experiment.csv --fullscreen --fixation --start-splash assets/welcome.png
 ```
 
-## Output
+### Control
+- **Escape:** Interrupt the experiment and exit (results are still saved).
+
+
+### Output
 Upon exiting, the program generates a log file (default: `results.csv`) containing:
 - **Metadata Header:** Detailed session info (date, user, host, command, OS, driver, renderer, resolution).
 - **Event Log:**
@@ -90,15 +96,11 @@ Upon exiting, the program generates a log file (default: `results.csv`) containi
   - `event_type`: `IMAGE_ONSET`, `IMAGE_OFFSET`, `SOUND_ONSET`, `TEXT_ONSET`, `TEXT_OFFSET`, or `RESPONSE`.
   - `label`: The stimulus content/file path or the name of the key pressed.
 
-## Control
-- **Escape:** Interrupt the experiment and exit (results are still saved).
-- **Any Key:** Advances splashscreens.
-
 
 
 ## License
 
-This code was developped by Christophe Pallier <christophe@pallier.org> using Gemini3. OF course, all remaining bugs are the responsability of Gemini 3 ;-)
+This code was developed by Christophe Pallier <christophe@pallier.org> using Gemini3. Of course, all remaining bugs are entirely the responsibility of Gemini 3 ;-)
 
 The code is distributed under the GNU LICENSE GPLv3.
 
