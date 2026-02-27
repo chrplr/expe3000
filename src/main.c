@@ -467,6 +467,19 @@ static void write_results(const Config *cfg, const EventLog *log,
 
 /* ─── Main Loop ──────────────────────────────────────────────── */
 
+static bool is_audio_active(AudioMixer *mixer) {
+    bool active = false;
+    SDL_LockMutex(mixer->mutex);
+    for (int i = 0; i < MAX_ACTIVE_SOUNDS; i++) {
+        if (mixer->slots[i].active) {
+            active = true;
+            break;
+        }
+    }
+    SDL_UnlockMutex(mixer->mutex);
+    return active;
+}
+
 static void run_experiment(const Config *cfg, Experiment *exp, Resource *resources,
                             SDL_Renderer *renderer, AudioMixer *mixer, EventLog *log,
                             dlp_io8g_t *dlp)
@@ -559,7 +572,8 @@ static void run_experiment(const Config *cfg, Experiment *exp, Resource *resourc
         }
 
         /* ── Exit condition ── */
-        if (current_stim >= exp->count && active_visual == -1 && now >= cfg->total_duration)
+        if (current_stim >= exp->count && active_visual == -1 && 
+            !is_audio_active(mixer) && now >= cfg->total_duration)
             running = false;
 
         /* ── Render ── */
