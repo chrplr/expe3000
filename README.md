@@ -38,7 +38,7 @@ For detailed installation and compilation instructions, please refer to the guid
 - `--start-splash [file]`: Display a PNG splashscreen at the start and wait for a keypress.
 - `--end-splash [file]`: Display a PNG splashscreen at the end and wait for a keypress.
 - `--total-duration [ms]`: Minimum duration for the experiment loop to run.
-- `--font [file]`: Specify the TTF font file for text stimuli (optional, defaults to system Arial/Liberation).
+- `--font [file]`: Specify the TTF font file for text stimuli (optional, defaults to searching `fonts/` folder then system Arial/Liberation).
 - `--font-size [pt]`: Set the font size in points (default: 24).
 - `--no-vsync`: Disable VSYNC synchronization (not recommended for precise timing).
 

@@ -575,7 +575,27 @@ static void run_experiment(const Config *cfg, Experiment *exp, Resource *resourc
 
 /* ─── Entry Point ────────────────────────────────────────────── */
 
+static SDL_EnumerationResult find_font_callback(void *userdata, const char *dirname, const char *fname) {
+    char *result = (char *)userdata;
+    const char *ext = strrchr(fname, '.');
+    if (ext && (SDL_strcasecmp(ext, ".ttf") == 0 || SDL_strcasecmp(ext, ".ttc") == 0)) {
+        SDL_snprintf(result, 1024, "%s/%s", dirname, fname);
+        return SDL_ENUM_SUCCESS;
+    }
+    return SDL_ENUM_CONTINUE;
+}
+
 static const char* get_default_font_path(void) {
+    static char local_font[1024];
+    local_font[0] = '\0';
+
+    /* 1. Check local 'fonts' subfolder */
+    SDL_EnumerateDirectory("fonts", find_font_callback, local_font);
+    if (local_font[0] != '\0') {
+        return local_font;
+    }
+
+    /* 2. Check system paths */
     static const char *const paths[] = {
 #if defined(_WIN32)
         "C:\\Windows\\Fonts\\arial.ttf",
