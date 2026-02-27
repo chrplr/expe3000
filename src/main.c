@@ -27,6 +27,7 @@
 #include "csv_parser.h"
 #include "argparse.h"
 #include "version.h"
+#include "dlp.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -84,6 +85,7 @@ typedef struct {
     const char *start_splash;
     const char *end_splash;
     const char *font_file;
+    const char *dlp_device;
     int         font_size;
     int         screen_w;
     int         screen_h;
@@ -233,6 +235,7 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
     cfg->start_splash   = NULL;
     cfg->end_splash     = NULL;
     cfg->font_file      = NULL;
+    cfg->dlp_device     = NULL;
     cfg->font_size      = 24;
     cfg->screen_w       = 1920;
     cfg->screen_h       = 1080;
@@ -271,6 +274,7 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
         OPT_INTEGER('z', "font-size",      &cfg->font_size,    "font size in points (default: 24)"),
         OPT_GROUP("Timing"),
         OPT_STRING ('D', "total-duration", &duration_str,      "minimum total experiment duration in ms"),
+        OPT_STRING (  0, "dlp",            &cfg->dlp_device,   "device path for DLP-IO8-G trigger (e.g. /dev/ttyUSB0)"),
         OPT_BOOLEAN(  0, "no-vsync",       &no_vsync,          "disable VSync (not recommended for timing)"),
         OPT_END(),
     };
@@ -464,7 +468,8 @@ static void write_results(const Config *cfg, const EventLog *log,
 /* ─── Main Loop ──────────────────────────────────────────────── */
 
 static void run_experiment(const Config *cfg, Experiment *exp, Resource *resources,
-                            SDL_Renderer *renderer, AudioMixer *mixer, EventLog *log)
+                            SDL_Renderer *renderer, AudioMixer *mixer, EventLog *log,
+                            dlp_io8g_t *dlp)
 {
     /* Determine refresh rate for predictive onset timing. */
     /* NOTE: target_display needs to be passed in or queried here. */
@@ -519,6 +524,7 @@ static void run_experiment(const Config *cfg, Experiment *exp, Resource *resourc
                 visual_end_time = now + s->duration_ms;
                 triggered_onset = true;
                 triggered_idx   = current_stim;
+                if (dlp) dlp_set(dlp, (s->type == STIM_IMAGE) ? "1" : "3");
             } else if (s->type == STIM_SOUND && resources[current_stim].sound.data) {
                 SDL_LockMutex(mixer->mutex);
                 for (int j = 0; j < MAX_ACTIVE_SOUNDS; j++) {
@@ -527,6 +533,11 @@ static void run_experiment(const Config *cfg, Experiment *exp, Resource *resourc
                         mixer->slots[j].play_pos = 0;
                         mixer->slots[j].active   = true;
                         log_event(log, now, "SOUND_ONSET", s->file_path);
+                        if (dlp) {
+                            dlp_set(dlp, "2");
+                            SDL_Delay(5); /* Short pulse for sound since it's fire-and-forget */
+                            dlp_unset(dlp, "2");
+                        }
                         break;
                     }
                 }
@@ -540,6 +551,10 @@ static void run_experiment(const Config *cfg, Experiment *exp, Resource *resourc
             const char *offset_type = (exp->stimuli[active_visual].type == STIM_IMAGE)
                                       ? "IMAGE_OFFSET" : "TEXT_OFFSET";
             log_event(log, now, offset_type, exp->stimuli[active_visual].file_path);
+            if (dlp) {
+                if (exp->stimuli[active_visual].type == STIM_IMAGE) dlp_unset(dlp, "1");
+                else dlp_unset(dlp, "3");
+            }
             active_visual = -1;
         }
 
@@ -744,12 +759,23 @@ int main(int argc, const char **argv) {
         SDL_Log("Warning: No font provided and no system font found. Text stimuli will be skipped.");
     }
 
-    /* ── Parse stimuli ── */
     Experiment *exp = parse_csv(cfg.csv_file);
     if (!exp) {
         fprintf(stderr, "Failed to parse CSV: %s\n", cfg.csv_file);
         if (font) TTF_CloseFont(font);
         goto cleanup;
+    }
+
+    /* ── DLP Trigger Device ── */
+    dlp_io8g_t *dlp = NULL;
+    if (cfg.dlp_device) {
+        dlp = dlp_new(cfg.dlp_device, 9600);
+        if (!dlp) {
+            SDL_Log("Warning: Failed to open DLP device '%s'", cfg.dlp_device);
+        } else {
+            SDL_Log("DLP device opened: %s", cfg.dlp_device);
+            dlp_unset(dlp, "12345678"); /* reset all lines to zero */
+        }
     }
 
     /* ── Audio mixer ── */
@@ -788,7 +814,7 @@ int main(int argc, const char **argv) {
 
     /* ── Run ── */
     EventLog log = {0};
-    run_experiment(&cfg, exp, resources, renderer, &mixer, &log);
+    run_experiment(&cfg, exp, resources, renderer, &mixer, &log, dlp);
 
     /* ── Write results ── */
     const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(target_display);
@@ -805,6 +831,7 @@ int main(int argc, const char **argv) {
     SDL_DestroyMutex(mixer.mutex);
     free_experiment(exp);
     if (font) TTF_CloseFont(font);
+    if (dlp) dlp_close(dlp);
 
 cleanup:
     SDL_DestroyRenderer(renderer);

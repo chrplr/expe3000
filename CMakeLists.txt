@@ -9,6 +9,7 @@ set(SOURCES
     src/main.c 
     src/csv_parser.c
     src/argparse.c
+    src/dlp.c
 )
 
 # Use PkgConfig to find SDL3 and its components

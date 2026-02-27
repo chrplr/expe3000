@@ -74,6 +74,7 @@ The experiment file should be a CSV (comma-separated) with the following columns
 - `--start-splash [file]`: Display a PNG splashscreen at the start and wait for a keypress.
 - `--end-splash [file]`: Display a PNG splashscreen at the end and wait for a keypress.
 - `--total-duration [ms]`: Minimum duration for the experiment loop to run.
+- `--dlp [path]`: Path to the DLP-IO8-G device for triggers (e.g., `/dev/ttyUSB0` or `COM3`).
 - `--font [file]`: Specify the TTF font file for text stimuli (optional, defaults to searching `fonts/` folder then system Arial/Liberation).
 - `--font-size [pt]`: Set the font size in points (default: 24).
 - `--no-vsync`: Disable VSYNC synchronization (not recommended for precise timing).
