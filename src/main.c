@@ -429,7 +429,8 @@ static void write_results(const Config *cfg, const EventLog *log,
                            const SDL_DisplayMode *mode,
                            const char *timestamp_str,
                            const char *username, const char *hostname,
-                           const char *cmd_line)
+                           const char *cmd_line,
+                           dlp_io8g_t *dlp)
 {
     FILE *f = fopen(cfg->output_file, "w");
     if (!f) {
@@ -448,6 +449,8 @@ static void write_results(const Config *cfg, const EventLog *log,
     if (mode)
         fprintf(f, "# Display Resolution: %dx%d @ %.2fHz\n",
                 mode->w, mode->h, mode->refresh_rate);
+
+    fprintf(f, "# DLP Trigger: %s\n", (dlp ? cfg->dlp_device : "NONE/FAILED"));
 
     int ver = SDL_GetVersion();
     fprintf(f, "# SDL Version: %d.%d.%d\n",
@@ -833,7 +836,7 @@ int main(int argc, const char **argv) {
     /* ── Write results ── */
     const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(target_display);
     write_results(&cfg, &log, renderer, mode,
-                  timestamp_str, username, hostname, cmd_line);
+                  timestamp_str, username, hostname, cmd_line, dlp);
 
     /* ── End splash ── */
     display_splash(renderer, cfg.end_splash, cfg.screen_w, cfg.screen_h, cfg.scale_factor);
