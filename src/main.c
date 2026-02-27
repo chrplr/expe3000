@@ -16,6 +16,7 @@
  */
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_filesystem.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <stdio.h>
@@ -263,7 +264,7 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
         OPT_STRING (  0, "start-splash",   &cfg->start_splash, "image to display at start"),
         OPT_STRING (  0, "end-splash",     &cfg->end_splash,   "image to display at end"),
         OPT_GROUP("Text stimuli"),
-        OPT_STRING ('f', "font",           &cfg->font_file,    "TTF font file for text stimuli"),
+        OPT_STRING ('f', "font",           &cfg->font_file,    "TTF font file for text stimuli (optional)"),
         OPT_INTEGER('z', "font-size",      &cfg->font_size,    "font size in points (default: 24)"),
         OPT_GROUP("Timing"),
         OPT_STRING ('D', "total-duration", &duration_str,      "minimum total experiment duration in ms"),
@@ -574,6 +575,35 @@ static void run_experiment(const Config *cfg, Experiment *exp, Resource *resourc
 
 /* ─── Entry Point ────────────────────────────────────────────── */
 
+static const char* get_default_font_path(void) {
+    static const char *const paths[] = {
+#if defined(_WIN32)
+        "C:\\Windows\\Fonts\\arial.ttf",
+        "C:\\Windows\\Fonts\\msjh.ttc",
+#elif defined(__APPLE__)
+        "/Library/Fonts/Arial.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/Library/Fonts/Helvetica.ttc",
+#else
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/msttcorefonts/arial.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/usr/share/fonts/TTF/LiberationSans-Regular.ttf",
+#endif
+        NULL
+    };
+
+    for (int i = 0; paths[i] != NULL; ++i) {
+        SDL_PathInfo info;
+        if (SDL_GetPathInfo(paths[i], &info)) {
+            return paths[i];
+        }
+    }
+    return NULL;
+}
+
 int main(int argc, const char **argv) {
     /* ── Metadata capture ── must happen before parse_args, because
        argparse_parse rewrites argc/argv in-place (stripping flags),
@@ -671,9 +701,19 @@ int main(int argc, const char **argv) {
 
     /* ── Font ── */
     TTF_Font *font = NULL;
-    if (cfg.font_file) {
-        font = TTF_OpenFont(cfg.font_file, (float)cfg.font_size);
-        if (!font) SDL_Log("Failed to load font '%s': %s", cfg.font_file, SDL_GetError());
+    const char *font_to_load = cfg.font_file;
+    if (!font_to_load) {
+        font_to_load = get_default_font_path();
+    }
+    if (font_to_load) {
+        font = TTF_OpenFont(font_to_load, (float)cfg.font_size);
+        if (!font) {
+            SDL_Log("Failed to load font '%s': %s", font_to_load, SDL_GetError());
+        } else {
+            SDL_Log("Loaded font: %s", font_to_load);
+        }
+    } else {
+        SDL_Log("Warning: No font provided and no system font found. Text stimuli will be skipped.");
     }
 
     /* ── Parse stimuli ── */
