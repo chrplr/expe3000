@@ -1,6 +1,9 @@
 # expe3000
 
-A multimedia stimulus delivery system built with C and SDL3. Designed for experimental psychology and neuroscience tasks requiring millisecond-accurate timing and low-latency audio.
+A multimedia stimulus delivery system built with C and SDL3. Designed for experimental psychology and neuroscience tasks requiring millisecond-accurate timing and low-latency audio. 
+
+**Important Note**: stimuli are presented using a fixed, predifined, schedule. Alhtought keypress events are saved, the behavior of the prgroam can be modified on-line (,e.g. no feedback). This program is suitable for fMR/MEG/EEG experiment with rigid stimulus presentation schemes.
+
 
 ## Features
 - **Precise Timing:** High-resolution timing loop with VSYNC synchronization and predictive onset look-ahead (pre-rendering).
@@ -11,44 +14,13 @@ A multimedia stimulus delivery system built with C and SDL3. Designed for experi
 - **Advanced Display Options:** Supports multiple monitors, custom resolutions, logical scaling, and magnification factors.
 - **Auto-exit:** Automatically concludes the experiment after the last stimulus or a specified total duration.
 
-## Installing Binaries
-
-Pre-compiled binaries for Linux, macOS, and Windows are available in the [Releases](https://github.com/chrplr/expe3000/releases) section of the GitHub project.
-
-### Dependencies
-
-The pre-compiled binaries for **Windows** are self-contained and include all necessary DLLs. 
-
-For **Linux** and **macOS**, you need to have the SDL3 libraries installed on your system to run the program:
-
-* *MacOS*. Install via [Homebrew](https://brew.sh/):
-   ```bash
-   brew install sdl3 sdl3_image sdl3_ttf
-   ```
-* *Linux*. Install via your package manager (if available):
-      - **Ubuntu 24.10+ / Debian Trixie+**: `sudo apt install libsdl3-0 libsdl3-image-0 libsdl3-ttf-0`
-      - **Fedora 41+**: `sudo dnf install sdl3 sdl3_image sdl3_ttf`
-      - **Arch Linux**: `sudo pacman -S sdl3 sdl3_image sdl3_ttf`
-
-   *Note: If your distribution does not yet provide SDL3 packages, you may need to compile them from source(INSTALL_Linux.md#3-option-b-compiling-sdl3-from-source-universal).*
-
-## Compilation
-
-For detailed installation and compilation instructions, please refer to the guide for your operating system:
-
-- [Linux](INSTALL_Linux.md)
-- [macOS](INSTALL_MACOSX.md)
-- [Windows](INSTALL_Windows.md)
-
-
 ## Usage
 
 ```bash
 ./expe3000 <experiment_csv> [options]
 ```
 
-### Format of the csv file describing the events
-The experiment file should be a CSV (comma-separated) with the following columns:
+The csv file must have three columns:
 `timestamp_ms,duration_ms,type,content`
 
 **Types:** `IMAGE`, `SOUND`, `TEXT`
@@ -96,6 +68,39 @@ Upon exiting, the program generates a log file (default: `results.csv`) containi
   - `timestamp_ms`: The time of the event relative to the start of the experiment.
   - `event_type`: `IMAGE_ONSET`, `IMAGE_OFFSET`, `SOUND_ONSET`, `TEXT_ONSET`, `TEXT_OFFSET`, or `RESPONSE`.
   - `label`: The stimulus content/file path or the name of the key pressed.
+
+
+
+## Installing Binaries
+
+Pre-compiled binaries for Linux, macOS, and Windows are available in the [Releases](https://github.com/chrplr/expe3000/releases) section of the GitHub project.
+
+### Dependencies
+
+The pre-compiled binaries for **Windows** are self-contained and include all necessary DLLs. 
+
+For **Linux** and **macOS**, you need to have the SDL3 libraries installed on your system to run the program:
+
+* *MacOS*. Install via [Homebrew](https://brew.sh/):
+   ```bash
+   brew install sdl3 sdl3_image sdl3_ttf
+   ```
+* *Linux*. Install via your package manager (if available):
+      - **Ubuntu 24.10+ / Debian Trixie+**: `sudo apt install libsdl3-0 libsdl3-image-0 libsdl3-ttf-0`
+      - **Fedora 41+**: `sudo dnf install sdl3 sdl3_image sdl3_ttf`
+      - **Arch Linux**: `sudo pacman -S sdl3 sdl3_image sdl3_ttf`
+
+   *Note: If your distribution does not yet provide SDL3 packages, you may need to compile them from source(INSTALL_Linux.md#3-option-b-compiling-sdl3-from-source-universal).*
+
+## Compilation
+
+For detailed installation and compilation instructions, please refer to the guide for your operating system:
+
+- [Linux](INSTALL_Linux.md)
+- [macOS](INSTALL_MACOSX.md)
+- [Windows](INSTALL_Windows.md)
+
+
 
 
 

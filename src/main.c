@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <inttypes.h>
 #include "csv_parser.h"
 #include "argparse.h"
 #include "version.h"
@@ -136,26 +137,32 @@ static void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream,
     (void)total_amount;
     AudioMixer *mx = (AudioMixer *)userdata;
 
-    /* Clamp to scratch buffer size to avoid overflow. */
-    int mix_len = additional_amount;
-    if (mix_len > AUDIO_SCRATCH_BYTES) mix_len = AUDIO_SCRATCH_BYTES;
+    int remaining = additional_amount;
+    while (remaining > 0) {
+        int chunk = (remaining > AUDIO_SCRATCH_BYTES) ? AUDIO_SCRATCH_BYTES : remaining;
+        memset(mx->scratch, 0, chunk);
 
-    memset(mx->scratch, 0, mix_len);
+        SDL_LockMutex(mx->mutex);
+        for (int i = 0; i < MAX_ACTIVE_SOUNDS; i++) {
+            ActiveSound *s = &mx->slots[i];
+            if (!s->active) continue;
 
-    SDL_LockMutex(mx->mutex);
-    for (int i = 0; i < MAX_ACTIVE_SOUNDS; i++) {
-        ActiveSound *s = &mx->slots[i];
-        if (!s->active) continue;
-        Uint32 remaining = s->resource->len - s->play_pos;
-        Uint32 chunk     = (mix_len > (int)remaining) ? remaining : (Uint32)mix_len;
-        SDL_MixAudio(mx->scratch, s->resource->data + s->play_pos,
-                     s->resource->spec.format, chunk, 1.0f);
-        s->play_pos += chunk;
-        if (s->play_pos >= s->resource->len) s->active = false;
+            Uint32 sound_remaining = s->resource->len - s->play_pos;
+            Uint32 to_mix = (chunk > (int)sound_remaining) ? sound_remaining : (Uint32)chunk;
+
+            /* NOTE: SDL_MixAudio assumes both buffers are the same format.
+               We rely on the fact that target_spec (S16) is used for the stream. */
+            SDL_MixAudio(mx->scratch, s->resource->data + s->play_pos,
+                         s->resource->spec.format, to_mix, 1.0f);
+
+            s->play_pos += to_mix;
+            if (s->play_pos >= s->resource->len) s->active = false;
+        }
+        SDL_UnlockMutex(mx->mutex);
+
+        SDL_PutAudioStreamData(stream, mx->scratch, chunk);
+        remaining -= chunk;
     }
-    SDL_UnlockMutex(mx->mutex);
-
-    SDL_PutAudioStreamData(stream, mx->scratch, mix_len);
 }
 
 /* ─── Rendering Helpers ──────────────────────────────────────── */
@@ -460,8 +467,8 @@ static void write_results(const Config *cfg, const EventLog *log,
     fprintf(f, "timestamp_ms,event_type,label\n");
 
     for (int i = 0; i < log->count; i++)
-        fprintf(f, "%lu,%s,%s\n",
-                (unsigned long)log->entries[i].timestamp_ms,
+        fprintf(f, "%" PRIu64 ",%s,%s\n",
+                log->entries[i].timestamp_ms,
                 log->entries[i].type,
                 log->entries[i].label);
 
@@ -740,10 +747,6 @@ int main(int argc, const char **argv) {
         return 1;
     }
     SDL_HideCursor();
-    if (cfg.fullscreen)
-        SDL_SetWindowPosition(window,
-            SDL_WINDOWPOS_UNDEFINED_DISPLAY(target_display),
-            SDL_WINDOWPOS_UNDEFINED_DISPLAY(target_display));
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
     if (!renderer) {

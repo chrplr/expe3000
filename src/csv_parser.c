@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 Experiment* parse_csv(const char *file_path) {
     FILE *file = fopen(file_path, "r");
@@ -22,7 +23,7 @@ Experiment* parse_csv(const char *file_path) {
         Stimulus *s = &exp->stimuli[exp->count];
 
         char type_str[16];
-        if (sscanf(line, "%lu,%lu,%15[^,],%255[^,\n\r]", &s->timestamp_ms, &s->duration_ms, type_str, s->file_path) == 4) {
+        if (sscanf(line, "%" SCNu64 ",%" SCNu64 ",%15[^,],%255[^,\n\r]", &s->timestamp_ms, &s->duration_ms, type_str, s->file_path) == 4) {
             if (strcmp(type_str, "IMAGE") == 0) s->type = STIM_IMAGE;
             else if (strcmp(type_str, "SOUND") == 0) s->type = STIM_SOUND;
             else if (strcmp(type_str, "TEXT") == 0) s->type = STIM_TEXT;
