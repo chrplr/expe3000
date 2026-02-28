@@ -57,6 +57,13 @@ The csv file must have three columns:
 ./expe3000 experiment.csv --stimuli-dir assets --fullscreen
 ```
 
+### Quick Start with Examples
+If you downloaded a pre-compiled release, you can quickly test the program using the provided example scripts:
+- **Windows**: Double-click `run_example.bat`
+- **Linux/macOS**: Run `./run_example.sh` in your terminal.
+
+These scripts run the `expe3000` executable with the included `experiment.csv` and `assets` folder.
+
 ### Control
 - **Escape:** Interrupt the experiment and exit (results are still saved).
 
