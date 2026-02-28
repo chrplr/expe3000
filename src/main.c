@@ -83,6 +83,7 @@ typedef struct {
 typedef struct {
     const char *csv_file;
     const char *output_file;
+    const char *stimuli_dir;
     const char *start_splash;
     const char *end_splash;
     const char *font_file;
@@ -239,6 +240,7 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
     /* Defaults */
     cfg->csv_file       = NULL;
     cfg->output_file    = "results.csv";
+    cfg->stimuli_dir    = NULL;
     cfg->start_splash   = NULL;
     cfg->end_splash     = NULL;
     cfg->font_file      = NULL;
@@ -249,7 +251,7 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
     cfg->display_index  = 0;
     cfg->scale_factor   = 1.0f;
     cfg->total_duration = 0;
-    cfg->use_fixation   = false;
+    cfg->use_fixation   = true;
     cfg->fullscreen     = false;
     cfg->vsync          = true;
 
@@ -267,12 +269,13 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
         OPT_BOOLEAN('v', "version",        &show_version,      "show version and exit"),
         OPT_GROUP("Output"),
         OPT_STRING ('o', "output",         &cfg->output_file,  "output log file (default: results.csv)"),
+        OPT_STRING (  0, "stimuli-dir",    &cfg->stimuli_dir,  "folder containing stimuli files"),
         OPT_GROUP("Display"),
         OPT_BOOLEAN('F', "fullscreen",     &fullscreen,        "run in fullscreen mode"),
         OPT_INTEGER('d', "display",        &cfg->display_index,"display monitor index (default: 0)"),
         OPT_STRING ('r', "res",            &res_str,           "resolution WxH (default: 1920x1080)"),
         OPT_STRING ('s', "scale",          &scale_str,         "image magnification factor (default: 1.0)"),
-        OPT_BOOLEAN('x', "fixation",       &use_fixation,      "show fixation cross between stimuli"),
+        OPT_BOOLEAN('x', "no-fixation",       &use_fixation,      "disable fixation cross between stimuli"),
         OPT_GROUP("Splash screens"),
         OPT_STRING (  0, "start-splash",   &cfg->start_splash, "image to display at start"),
         OPT_STRING (  0, "end-splash",     &cfg->end_splash,   "image to display at end"),
@@ -311,7 +314,7 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
     }
 
     /* Post-parse conversions */
-    cfg->use_fixation = (bool)use_fixation;
+    cfg->use_fixation = !(bool)use_fixation;
     cfg->fullscreen   = (bool)fullscreen;
     cfg->vsync        = !no_vsync;
 
@@ -350,7 +353,8 @@ static CacheEntry* find_in_cache(CacheEntry *head, StimType type, const char *pa
 }
 
 static Resource *load_resources(SDL_Renderer *renderer, const Experiment *exp,
-                                 TTF_Font *font, CacheEntry **cache_out)
+                                 TTF_Font *font, const char *stimuli_dir,
+                                 CacheEntry **cache_out)
 {
     *cache_out = NULL;
     Resource *res = calloc(exp->count, sizeof(Resource));
@@ -378,16 +382,23 @@ static Resource *load_resources(SDL_Renderer *renderer, const Experiment *exp,
         entry->type = s->type;
         strncpy(entry->file_path, s->file_path, sizeof(entry->file_path) - 1);
 
+        char full_path[1024];
+        const char *actual_path = s->file_path;
+        if (stimuli_dir && (s->type == STIM_IMAGE || s->type == STIM_SOUND)) {
+            SDL_snprintf(full_path, sizeof(full_path), "%s/%s", stimuli_dir, s->file_path);
+            actual_path = full_path;
+        }
+
         if (s->type == STIM_IMAGE) {
-            entry->texture = IMG_LoadTexture(renderer, s->file_path);
+            entry->texture = IMG_LoadTexture(renderer, actual_path);
             if (entry->texture)
                 SDL_GetTextureSize(entry->texture, &entry->w, &entry->h);
             else
-                SDL_Log("load_resources: failed to load image '%s': %s", s->file_path, SDL_GetError());
+                SDL_Log("load_resources: failed to load image '%s': %s", actual_path, SDL_GetError());
         } else if (s->type == STIM_SOUND) {
-            if (!SDL_LoadWAV(s->file_path, &entry->sound.spec,
+            if (!SDL_LoadWAV(actual_path, &entry->sound.spec,
                              &entry->sound.data, &entry->sound.len))
-                SDL_Log("load_resources: failed to load WAV '%s': %s", s->file_path, SDL_GetError());
+                SDL_Log("load_resources: failed to load WAV '%s': %s", actual_path, SDL_GetError());
         } else if (s->type == STIM_TEXT) {
             if (!font) {
                 SDL_Log("load_resources: text stimulus '%s' skipped (no font loaded)", s->file_path);
@@ -435,6 +446,7 @@ static void write_results(const Config *cfg, const EventLog *log,
                            SDL_Renderer *renderer,
                            const SDL_DisplayMode *mode,
                            const char *timestamp_str,
+                           const char *main_loop_start_time,
                            const char *username, const char *hostname,
                            const char *cmd_line,
                            dlp_io8g_t *dlp)
@@ -446,7 +458,8 @@ static void write_results(const Config *cfg, const EventLog *log,
     }
 
     fprintf(f, "# expe3000 Experiment Results\n");
-    fprintf(f, "# Date/Time: %s\n", timestamp_str);
+    fprintf(f, "# Date/Time (Initial): %s\n", timestamp_str);
+    fprintf(f, "# Main Loop Start Time: %s\n", main_loop_start_time);
     fprintf(f, "# User/Host: %s@%s\n", username, hostname);
     fprintf(f, "# Command Line: %s\n", cmd_line);
     fprintf(f, "# Platform: %s\n", SDL_GetPlatform());
@@ -822,7 +835,7 @@ int main(int argc, const char **argv) {
 
     /* ── Load resources ── */
     CacheEntry *cache = NULL;
-    Resource *resources = load_resources(renderer, exp, font, &cache);
+    Resource *resources = load_resources(renderer, exp, font, cfg.stimuli_dir, &cache);
     if (!resources) {
         SDL_Log("load_resources: calloc failed");
         SDL_DestroyAudioStream(master_stream);
@@ -832,14 +845,42 @@ int main(int argc, const char **argv) {
         goto cleanup;
     }
 
+    /* ── Report resources ── */
+    int image_count = 0, sound_count = 0, text_count = 0;
+    size_t total_memory = 0;
+    for (CacheEntry *curr = cache; curr; curr = curr->next) {
+        if (curr->type == STIM_IMAGE || curr->type == STIM_TEXT) {
+            if (curr->type == STIM_IMAGE) image_count++;
+            else text_count++;
+
+            if (curr->texture) {
+                float w, h;
+                SDL_GetTextureSize(curr->texture, &w, &h);
+                /* Assuming 32-bit (4 bytes per pixel) for simple estimation. */
+                total_memory += (size_t)(w * h * 4);
+            }
+        } else if (curr->type == STIM_SOUND) {
+            sound_count++;
+            total_memory += curr->sound.len;
+        }
+    }
+    SDL_Log("Resources loaded: %d images, %d sounds, %d text textures. Total estimated memory: %.2f MB",
+            image_count, sound_count, text_count, (double)total_memory / (1024.0 * 1024.0));
+
     /* ── Run ── */
+    time_t loop_start_time;
+    time(&loop_start_time);
+    char main_loop_start_str[64];
+    struct tm *lt = localtime(&loop_start_time);
+    strftime(main_loop_start_str, sizeof(main_loop_start_str), "%Y-%m-%d %H:%M:%S", lt);
+
     EventLog log = {0};
     run_experiment(&cfg, exp, resources, renderer, &mixer, &log, dlp);
 
     /* ── Write results ── */
     const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(target_display);
     write_results(&cfg, &log, renderer, mode,
-                  timestamp_str, username, hostname, cmd_line, dlp);
+                  timestamp_str, main_loop_start_str, username, hostname, cmd_line, dlp);
 
     /* ── End splash ── */
     display_splash(renderer, cfg.end_splash, cfg.screen_w, cfg.screen_h, cfg.scale_factor);

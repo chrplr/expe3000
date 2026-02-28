@@ -38,7 +38,7 @@ The csv file must have three columns:
 ### Options
 - `-h, --help`: Show help message.
 - `--output [file]`: Specify the output log file (default: `results.csv`).
-- `--fixation`: Display a white center fixation cross between visual stimuli.
+- `--no-fixation`: remove the white center fixation cross.
 - `--fullscreen`: Run in fullscreen mode on the selected display.
 - `--display [index]`: Select monitor index (default: 0).
 - `--res [WxH]`: Set resolution (default: 1920x1080).
@@ -54,7 +54,7 @@ The csv file must have three columns:
 
 ### Example Command
 ```bash
-./expe3000 experiment.csv --fullscreen --fixation --start-splash assets/welcome.png
+./expe3000 experiment.csv --stimuli-dir assets --fullscreen
 ```
 
 ### Control

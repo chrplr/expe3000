@@ -1,5 +1,0 @@
-# timestamp_ms,duration_ms,type,file_path
-1000,500,IMAGE,assets/image1.png
-2000,0,SOUND,assets/sound1.wav
-3000,500,IMAGE,assets/image2.png
-5000,0,SOUND,assets/sound2.wav
