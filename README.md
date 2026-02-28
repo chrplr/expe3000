@@ -2,7 +2,7 @@
 
 A multimedia stimulus delivery system built with C and SDL3. Designed for experimental psychology and neuroscience tasks requiring millisecond-accurate timing and low-latency audio. 
 
-**Important Note**: stimuli are presented using a fixed, predifined, schedule. Alhtought keypress events are saved, the behavior of the prgroam can be modified on-line (,e.g. no feedback). This program is suitable for fMR/MEG/EEG experiment with rigid stimulus presentation schemes.
+**Important Note**: stimuli are presented according to a fixed, predefined, schedule. Althought keypress events are saved, with a timestamp, the behavior of the prgroam cannot be modified in real-time, e.g. you cannot provide immediate feedback. There is no notion of "trial". "This approach is suitable for fMR/MEG/EEG experiment with rigid stimulus presentation schedules.
 
 
 ## Features
@@ -13,6 +13,18 @@ A multimedia stimulus delivery system built with C and SDL3. Designed for experi
 - **Splashscreens:** Optional start and end screens that wait for user input.
 - **Advanced Display Options:** Supports multiple monitors, custom resolutions, logical scaling, and magnification factors.
 - **Auto-exit:** Automatically concludes the experiment after the last stimulus or a specified total duration.
+
+
+### Quick Start with Examples
+If you downloaded a pre-compiled release, you can quickly test the program using the provided example scripts:
+- **Windows**: Double-click `run_example.bat`
+- **Linux/macOS**: Run `./run_example.sh` in your terminal.
+
+These scripts run the `expe3000` executable with the included `experiment.csv` and `assets` folder.
+
+
+Note: yuo can press **Escape** any time to interrupt the experiment and exit.
+
 
 ## Usage
 
@@ -56,17 +68,6 @@ The csv file must have three columns:
 ```bash
 ./expe3000 experiment.csv --stimuli-dir assets --fullscreen
 ```
-
-### Quick Start with Examples
-If you downloaded a pre-compiled release, you can quickly test the program using the provided example scripts:
-- **Windows**: Double-click `run_example.bat`
-- **Linux/macOS**: Run `./run_example.sh` in your terminal.
-
-These scripts run the `expe3000` executable with the included `experiment.csv` and `assets` folder.
-
-### Control
-- **Escape:** Interrupt the experiment and exit (results are still saved).
-
 
 ### Output
 Upon exiting, the program generates a log file (default: `results.csv`) containing:
