@@ -2,7 +2,7 @@
 
 A multimedia stimulus delivery system built with C and SDL3. Designed for experimental psychology and neuroscience tasks requiring millisecond-accurate timing and low-latency audio. 
 
-**Important Note**: stimuli are presented according to a fixed, predefined, schedule. Althought keypress events are saved, with a timestamp, the behavior of the prgroam cannot be modified in real-time, e.g. you cannot provide immediate feedback. There is no notion of "trial". "This approach is suitable for fMR/MEG/EEG experiment with rigid stimulus presentation schedules.
+**Important Note**: stimuli are presented according to a fixed, predefined, schedule. Althought keypress events are saved, with a timestamp, the behavior of the program cannot be modified in real-time, e.g. you cannot provide immediate feedback. There is no notion of "trial". This approach is suitable for fMRI/MEG/EEG experiments with rigid stimulus presentation schedules.
 
 
 ## Features
@@ -40,8 +40,8 @@ The csv file must have three columns:
 **Example (`experiment.csv`):**
 ```csv
 # timestamp, duration, type, content
-1000,500,IMAGE,assets/target.png
-2000,0,SOUND,assets/beep.wav
+1000,500,IMAGE,target.png
+2000,0,SOUND,beep.wav
 3000,1500,TEXT,Bye
 ```
 *Note: Use `0` duration for sounds.*
@@ -50,6 +50,7 @@ The csv file must have three columns:
 ### Options
 - `-h, --help`: Show help message.
 - `--output [file]`: Specify the output log file (default: `results.csv`).
+- `--stimuli-dir [dir]`: folder containing stimuli files (relative to the CSV file).
 - `--no-fixation`: remove the white center fixation cross.
 - `--fullscreen`: Run in fullscreen mode on the selected display.
 - `--display [index]`: Select monitor index (default: 0).
