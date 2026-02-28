@@ -16,18 +16,21 @@ A multimedia stimulus delivery system built with C and SDL3. Designed for experi
 
 
 ### Quick Start with Examples
-If you downloaded a pre-compiled release, you can quickly test the program using the provided example scripts:
-- **Windows**: Double-click `run_example.bat`
-- **Linux/macOS**: Run `./run_example.sh` in your terminal.
+If you downloaded a pre-compiled release, you can quickly test the program:
+- **GUI Mode**: Just double-click the `expe3000` executable. A setup window will appear allowing you to select your experiment file and settings.
+- **Example Scripts**:
+    - **Windows**: Double-click `run_example.bat`
+    - **Linux/macOS**: Run `./run_example.sh` in your terminal.
 
 These scripts run the `expe3000` executable with the included `experiment.csv` and `assets` folder.
 
 
-Note: yuo can press **Escape** any time to interrupt the experiment and exit.
+Note: you can press **Escape** any time to interrupt the experiment and exit.
 
 
 ## Usage
 
+### Command Line
 ```bash
 ./expe3000 <experiment_csv> [options]
 ```
@@ -47,10 +50,20 @@ The csv file must have three columns:
 *Note: Use `0` duration for sounds.*
 
 
+### Interactive GUI Mode
+If you run `expe3000` without any command-line arguments (and no `experiment.csv` is found in the current folder), an **Interactive Setup Window** will open. 
+
+This window allows you to:
+- **Select Files**: Use the "..." buttons to browse for your Experiment CSV, Stimuli Directory, and Output Results file.
+- **Set Resolution**: Choose between standard experimental resolutions (800x600, 1024x768, 1366x1024).
+- **Toggle Features**: Enable or disable the fixation cross and Fullscreen mode.
+- **Launch**: Click **START** to begin the experiment once the CSV path is set.
+
+
 ### Options
 - `-h, --help`: Show help message.
 - `--output [file]`: Specify the output log file (default: `results.csv`).
-- `--stimuli-dir [dir]`: folder containing stimuli files (relative to the CSV file).
+- `--stimuli-dir [dir]`: folder containing stimuli files (absolute or relative to the current working directory).
 - `--no-fixation`: remove the white center fixation cross.
 - `--fullscreen`: Run in fullscreen mode on the selected display.
 - `--display [index]`: Select monitor index (default: 0).

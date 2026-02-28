@@ -10,6 +10,11 @@ set(SOURCES
     src/csv_parser.c
     src/argparse.c
     src/dlp.c
+    src/config.c
+    src/audio.c
+    src/resources.c
+    src/gui_setup.c
+    src/experiment.c
 )
 
 # Use PkgConfig to find SDL3 and its components
