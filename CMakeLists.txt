@@ -36,3 +36,12 @@ target_link_libraries(expe3000 PRIVATE
 
 # Add compiler options
 target_compile_options(expe3000 PRIVATE -Wno-missing-field-initializers)
+
+# Ensure console output works on Windows (prevents stdout from being suppressed)
+if(WIN32)
+    if(MSVC)
+        target_link_options(expe3000 PRIVATE /SUBSYSTEM:CONSOLE)
+    else()
+        target_link_options(expe3000 PRIVATE -mconsole)
+    endif()
+endif()
