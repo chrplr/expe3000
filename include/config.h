@@ -30,6 +30,10 @@ typedef struct {
     bool  use_fixation;
     bool  fullscreen;
     bool  vsync;
+    bool  gui;
+    SDL_Color bg_color;
+    SDL_Color text_color;
+    SDL_Color fixation_color;
 } Config;
 
 /**

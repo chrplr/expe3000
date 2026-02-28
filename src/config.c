@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define CACHE_FILE ".expe3000_cache"
 
@@ -22,6 +23,16 @@ static const char *const usage_lines[] = {
     "expe3000 <stimuli_csv_file> [options]",
     NULL,
 };
+
+static void parse_color(const char *str, SDL_Color *color) {
+    int r, g, b;
+    if (sscanf(str, "%d,%d,%d", &r, &g, &b) == 3) {
+        color->r = (Uint8)r;
+        color->g = (Uint8)g;
+        color->b = (Uint8)b;
+        color->a = 255;
+    }
+}
 
 void save_config_cache(const Config *cfg) {
     FILE *f = fopen(CACHE_FILE, "w");
@@ -33,6 +44,9 @@ void save_config_cache(const Config *cfg) {
     fprintf(f, "screen_h=%d\n", cfg->screen_h);
     fprintf(f, "use_fixation=%d\n", cfg->use_fixation ? 1 : 0);
     fprintf(f, "fullscreen=%d\n", cfg->fullscreen ? 1 : 0);
+    fprintf(f, "bg_color=%d,%d,%d\n", cfg->bg_color.r, cfg->bg_color.g, cfg->bg_color.b);
+    fprintf(f, "text_color=%d,%d,%d\n", cfg->text_color.r, cfg->text_color.g, cfg->text_color.b);
+    fprintf(f, "fixation_color=%d,%d,%d\n", cfg->fixation_color.r, cfg->fixation_color.g, cfg->fixation_color.b);
     fclose(f);
 }
 
@@ -54,6 +68,9 @@ void load_config_cache(Config *cfg) {
         else if (strcmp(line, "screen_h") == 0) cfg->screen_h = atoi(val);
         else if (strcmp(line, "use_fixation") == 0) cfg->use_fixation = (atoi(val) != 0);
         else if (strcmp(line, "fullscreen") == 0) cfg->fullscreen = (atoi(val) != 0);
+        else if (strcmp(line, "bg_color") == 0) parse_color(val, &cfg->bg_color);
+        else if (strcmp(line, "text_color") == 0) parse_color(val, &cfg->text_color);
+        else if (strcmp(line, "fixation_color") == 0) parse_color(val, &cfg->fixation_color);
     }
     fclose(f);
 }
@@ -64,13 +81,14 @@ bool parse_args(int argc, const char **argv, Config *cfg) {
     cfg->font_size = 24; cfg->screen_w = 1920; cfg->screen_h = 1080;
     cfg->display_index = 0; cfg->scale_factor = 1.0f; cfg->use_fixation = true;
     cfg->vsync = true;
+    cfg->bg_color = (SDL_Color){0, 0, 0, 255};
+    cfg->text_color = (SDL_Color){255, 255, 255, 255};
+    cfg->fixation_color = (SDL_Color){255, 255, 255, 255};
 
-    /* Load cache over defaults */
-    load_config_cache(cfg);
-
-    int no_vsync = 0, use_fixation = -1, fullscreen = -1, show_version = 0;
+    int no_vsync = 0, use_fixation = 0, fullscreen = 0, show_version = 0, force_gui = 0;
     const char *scale_str = NULL, *duration_str = NULL, *res_str = NULL;
     const char *output_file_arg = NULL, *stim_dir_arg = NULL;
+    const char *bg_color_str = NULL, *text_color_str = NULL, *fixation_color_str = NULL;
 
     struct argparse_option options[] = {
         OPT_HELP(),
@@ -79,14 +97,18 @@ bool parse_args(int argc, const char **argv, Config *cfg) {
         OPT_STRING ('o', "output", &output_file_arg, "output csv"),
         OPT_STRING (  0, "stimuli-dir", &stim_dir_arg, "stimuli dir"),
         OPT_GROUP("Display"),
+        OPT_BOOLEAN('g', "gui", &force_gui, "force starting with the GUI"),
         OPT_BOOLEAN('F', "fullscreen", &fullscreen, "fullscreen"),
         OPT_INTEGER('d', "display", &cfg->display_index, "display index"),
         OPT_STRING ('r', "res", &res_str, "WxH"),
         OPT_STRING ('s', "scale", &scale_str, "scale"),
         OPT_BOOLEAN('x', "no-fixation", &use_fixation, "no-fixation"),
+        OPT_STRING (  0, "bg-color", &bg_color_str, "background color R,G,B"),
+        OPT_STRING (  0, "fixation-color", &fixation_color_str, "fixation cross color R,G,B"),
         OPT_GROUP("Text"),
         OPT_STRING ('f', "font", &cfg->font_file, "font file"),
         OPT_INTEGER('z', "font-size", &cfg->font_size, "font size"),
+        OPT_STRING (  0, "text-color", &text_color_str, "text color R,G,B"),
         OPT_GROUP("Other"),
         OPT_STRING ('D', "total-duration", &duration_str, "duration ms"),
         OPT_STRING (  0, "dlp", &cfg->dlp_device, "dlp device"),
@@ -105,30 +127,76 @@ bool parse_args(int argc, const char **argv, Config *cfg) {
     if (output_file_arg) strncpy(cfg->output_file, output_file_arg, 1023);
     if (stim_dir_arg) strncpy(cfg->stimuli_dir, stim_dir_arg, 1023);
 
-    if (argc > 0) {
+    if (force_gui) {
+        load_config_cache(cfg);
+        /* If user provided arguments, they should override the cache */
+        if (output_file_arg) strncpy(cfg->output_file, output_file_arg, 1023);
+        if (stim_dir_arg) strncpy(cfg->stimuli_dir, stim_dir_arg, 1023);
+        if (argc > 0) strncpy(cfg->csv_file, (const char *)argv[0], 1023);
+        if (bg_color_str) parse_color(bg_color_str, &cfg->bg_color);
+        if (text_color_str) parse_color(text_color_str, &cfg->text_color);
+        if (fixation_color_str) parse_color(fixation_color_str, &cfg->fixation_color);
+        
+        if (!SDL_Init(SDL_INIT_VIDEO)) return false;
+        if (!TTF_Init()) return false;
+        if (!run_gui_setup(cfg)) return false;
+    } else if (argc > 0) {
         strncpy(cfg->csv_file, (const char *)argv[0], 1023);
     } else {
-        SDL_PathInfo info;
-        if (cfg->csv_file[0] == '\0' && SDL_GetPathInfo("experiment.csv", &info)) {
-            strncpy(cfg->csv_file, "experiment.csv", 1023);
-        }
+        /* No arguments provided: launch GUI setup pre-populated from cache */
+        load_config_cache(cfg);
         
-        if (cfg->csv_file[0] == '\0' || !SDL_GetPathInfo(cfg->csv_file, &info)) {
-            if (!cfg->stimuli_dir[0] && SDL_GetPathInfo("assets", &info) && info.type == SDL_PATHTYPE_DIRECTORY)
-                strncpy(cfg->stimuli_dir, "assets", 1023);
+        if (!SDL_Init(SDL_INIT_VIDEO)) return false;
+        if (!TTF_Init()) return false;
+        
+        SDL_PathInfo info;
+        if (!cfg->stimuli_dir[0] && SDL_GetPathInfo("assets", &info) && info.type == SDL_PATHTYPE_DIRECTORY)
+            strncpy(cfg->stimuli_dir, "assets", 1023);
 
-            if (!SDL_Init(SDL_INIT_VIDEO)) return false;
-            if (!TTF_Init()) return false;
-            if (!run_gui_setup(cfg)) return false;
-        }
+        if (!run_gui_setup(cfg)) return false;
     }
 
-    if (use_fixation == 1) cfg->use_fixation = false;
-    if (fullscreen == 1) cfg->fullscreen = true;
+    if (use_fixation > 0) cfg->use_fixation = false;
+    if (fullscreen > 0) cfg->fullscreen = true;
     cfg->vsync = !no_vsync;
     if (res_str) sscanf(res_str, "%dx%d", &cfg->screen_w, &cfg->screen_h);
     if (scale_str) cfg->scale_factor = (float)atof(scale_str);
     if (duration_str) cfg->total_duration = (Uint64)atoll(duration_str);
+    if (bg_color_str) parse_color(bg_color_str, &cfg->bg_color);
+    if (text_color_str) parse_color(text_color_str, &cfg->text_color);
+    if (fixation_color_str) parse_color(fixation_color_str, &cfg->fixation_color);
+
+    /* Decorate output filename with experiment basename and timestamp */
+    if (cfg->csv_file[0] != '\0') {
+        char base_out[512];
+        char ext[16] = ".csv";
+        strncpy(base_out, cfg->output_file, 511);
+        base_out[511] = '\0';
+        char *dot = strrchr(base_out, '.');
+        if (dot) {
+            strncpy(ext, dot, 15);
+            ext[15] = '\0';
+            *dot = '\0';
+        }
+
+        char csv_base[256];
+        const char *last_slash = strrchr(cfg->csv_file, '/');
+        const char *last_backslash = strrchr(cfg->csv_file, '\\');
+        const char *start = cfg->csv_file;
+        if (last_slash && last_slash >= start) start = last_slash + 1;
+        if (last_backslash && last_backslash >= start) start = last_backslash + 1;
+        strncpy(csv_base, start, 255);
+        csv_base[255] = '\0';
+        char *csv_dot = strrchr(csv_base, '.');
+        if (csv_dot) *csv_dot = '\0';
+
+        time_t now = time(NULL);
+        struct tm *t = localtime(&now);
+        char timestamp[32];
+        strftime(timestamp, sizeof(timestamp), "%Y%m%d-%H%M%S", t);
+
+        snprintf(cfg->output_file, 1023, "%s_%s_%s%s", base_out, csv_base, timestamp, ext);
+    }
 
     return true;
 }

@@ -51,7 +51,7 @@ The csv file must have three columns:
 
 
 ### Interactive GUI Mode
-If you run `expe3000` without any command-line arguments (and no `experiment.csv` is found in the current folder), an **Interactive Setup Window** will open. 
+If you run `expe3000` without any command-line arguments (and no `experiment.csv` is found in the current folder), or if you use the `--gui` option, an **Interactive Setup Window** will open. 
 
 This window allows you to:
 - **Select Files**: Use the "..." buttons to browse for your Experiment CSV, Stimuli Directory, and Output Results file.
@@ -62,6 +62,7 @@ This window allows you to:
 
 ### Options
 - `-h, --help`: Show help message.
+- `-g, --gui`: Force starting with the interactive GUI setup.
 - `--output [file]`: Specify the output log file (default: `results.csv`).
 - `--stimuli-dir [dir]`: folder containing stimuli files (absolute or relative to the current working directory).
 - `--no-fixation`: remove the white center fixation cross.

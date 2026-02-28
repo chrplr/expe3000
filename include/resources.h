@@ -33,7 +33,7 @@ typedef struct CacheEntry {
 /**
  * @brief Loads all resources defined in an experiment.
  */
-Resource *load_resources(SDL_Renderer *renderer, const Experiment *exp, TTF_Font *font, const char *base_path, CacheEntry **cache_out);
+Resource *load_resources(SDL_Renderer *renderer, const Experiment *exp, TTF_Font *font, SDL_Color text_color, const char *base_path, CacheEntry **cache_out);
 
 /**
  * @brief Frees all allocated resources and the cache.

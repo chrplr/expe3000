@@ -22,7 +22,7 @@ static CacheEntry* find_in_cache(CacheEntry *head, StimType type, const char *pa
     return NULL;
 }
 
-Resource *load_resources(SDL_Renderer *renderer, const Experiment *exp, TTF_Font *font, const char *base_path, CacheEntry **cache_out) {
+Resource *load_resources(SDL_Renderer *renderer, const Experiment *exp, TTF_Font *font, SDL_Color text_color, const char *base_path, CacheEntry **cache_out) {
     *cache_out = NULL;
     Resource *res = calloc(exp->count, sizeof(Resource));
     if (!res) return NULL;
@@ -76,8 +76,7 @@ Resource *load_resources(SDL_Renderer *renderer, const Experiment *exp, TTF_Font
                 SDL_Log("Failed to load sound: %s", full_path);
             }
         } else if (s->type == STIM_TEXT && font) {
-            SDL_Color white = {255, 255, 255, 255};
-            SDL_Surface *surf = TTF_RenderText_Blended(font, s->file_path, 0, white);
+            SDL_Surface *surf = TTF_RenderText_Blended(font, s->file_path, 0, text_color);
             if (surf) {
                 entry->texture = SDL_CreateTextureFromSurface(renderer, surf);
                 entry->w = (float)surf->w; entry->h = (float)surf->h;

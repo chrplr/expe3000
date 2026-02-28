@@ -19,6 +19,7 @@
 #include "dlp.h"
 
 typedef struct {
+    Uint64 intended_ms;
     Uint64 timestamp_ms;
     char   type[16];
     char   label[256];
@@ -31,9 +32,9 @@ typedef struct {
 } EventLog;
 
 /**
- * @brief Logs an event with a timestamp.
+ * @brief Logs an event with intended and actual timestamps.
  */
-bool log_event(EventLog *log, Uint64 time_ms, const char *type, const char *label);
+bool log_event(EventLog *log, Uint64 intended_ms, Uint64 actual_ms, const char *type, const char *label);
 
 /**
  * @brief Frees the event log memory.
@@ -43,13 +44,13 @@ void free_event_log(EventLog *log);
 /**
  * @brief Core experiment loop.
  */
-void run_experiment(Config *cfg, Experiment *exp, Resource *resources, 
+bool run_experiment(Config *cfg, Experiment *exp, Resource *resources, 
                     SDL_Renderer *rend, AudioMixer *mx, EventLog *log, 
                     dlp_io8g_t *dlp, SDL_AudioStream *ms, TTF_Font *fnt);
 
 /**
  * @brief Displays a splash screen and waits for a keypress.
  */
-bool display_splash(SDL_Renderer *renderer, const char *file_path, int screen_w, int screen_h, float scale_factor);
+bool display_splash(SDL_Renderer *renderer, const char *file_path, int screen_w, int screen_h, float scale_factor, SDL_Color bg_color);
 
 #endif // EXPERIMENT_H
