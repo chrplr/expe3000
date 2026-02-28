@@ -321,8 +321,21 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
     }
 
     /* First remaining positional argument is the CSV file */
-    if (argc > 0)
+    if (argc > 0) {
         cfg->csv_file = argv[0];
+    } else {
+        /* No arguments provided: try to find default files for easy "double-click" execution */
+        SDL_PathInfo info;
+        if (SDL_GetPathInfo("experiment.csv", &info)) {
+            cfg->csv_file = "experiment.csv";
+            SDL_Log("No CSV file specified, using default: experiment.csv");
+
+            if (!cfg->stimuli_dir && SDL_GetPathInfo("assets", &info) && info.type == SDL_PATHTYPE_DIRECTORY) {
+                cfg->stimuli_dir = "assets";
+                SDL_Log("Defaulting stimuli-dir to: assets");
+            }
+        }
+    }
 
     if (!cfg->csv_file) {
         fprintf(stderr, "Error: no CSV stimulus file specified.\n");
