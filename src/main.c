@@ -299,7 +299,24 @@ static bool parse_args(int argc, const char **argv, Config *cfg) {
     argc = argparse_parse(&ap, argc, argv);
 
     if (show_version) {
+        int sdl_ver = SDL_GetVersion();
         printf("expe3000 version %s\n", EXPE3000_VERSION);
+        printf("Build date: %s %s\n", __DATE__, __TIME__);
+#if defined(__clang__)
+        printf("Compiler: Clang %s\n", __VERSION__);
+#elif defined(__GNUC__)
+        printf("Compiler: GCC %s\n", __VERSION__);
+#elif defined(_MSC_VER)
+        printf("Compiler: MSVC %d\n", _MSC_VER);
+#elif defined(__VERSION__)
+        printf("Compiler: %s\n", __VERSION__);
+#endif
+        printf("SDL version: %d.%d.%d\n",
+               SDL_VERSIONNUM_MAJOR(sdl_ver),
+               SDL_VERSIONNUM_MINOR(sdl_ver),
+               SDL_VERSIONNUM_MICRO(sdl_ver));
+        printf("Author: Christophe Pallier <christophe@pallier.org>\n");
+        printf("Repository: https://github.com/chrplr/expe3000\n");
         exit(EXIT_SUCCESS);
     }
 

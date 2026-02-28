@@ -57,7 +57,10 @@ jobs:
       run: |
         mkdir -p release-linux
         cp build/expe3000 release-linux/
-        tar -czvf expe3000-linux.tar.gz -C release-linux expe3000
+        cp README.md release-linux/
+        cp -r assets release-linux/
+        cp -r fonts release-linux/
+        tar -czvf expe3000-linux.tar.gz -C release-linux .
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -120,7 +123,10 @@ jobs:
       run: |
         mkdir -p release-macos
         cp build/expe3000 release-macos/
-        zip -j expe3000-macos.zip release-macos/expe3000
+        cp README.md release-macos/
+        cp -r assets release-macos/
+        cp -r fonts release-macos/
+        cd release-macos && zip -r ../expe3000-macos.zip .
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -159,9 +165,12 @@ jobs:
       run: |
         mkdir -p release-windows
         cp build/expe3000.exe release-windows/
+        cp README.md release-windows/
+        cp -r assets release-windows/
+        cp -r fonts release-windows/
         # Collect all required MinGW DLLs automatically
         cp $(ldd build/expe3000.exe | grep /mingw64/bin | awk '{print $3}') release-windows/
-        zip -j expe3000-windows.zip release-windows/*
+        cd release-windows && zip -r ../expe3000-windows.zip .
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
