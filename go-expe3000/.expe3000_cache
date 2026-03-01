@@ -1,0 +1,10 @@
+csv_file=/home/cp983411/00_git/expe3000/experiment.csv
+output_file=results.csv
+stimuli_dir=/home/cp983411/00_git/expe3000/assets
+screen_w=1920
+screen_h=1080
+use_fixation=1
+fullscreen=0
+bg_color=0,0,0
+text_color=255,255,255
+fixation_color=255,255,255

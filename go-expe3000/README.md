@@ -9,18 +9,31 @@ This is a port of the `expe3000` multimedia stimulus delivery system to Go, usin
 
 ## Building
 
+To build both the CLI and GUI versions:
+
 ```bash
 cd go-expe3000
-go build -o expe3000-go .
+go build -o expe3000 ./cmd/expe3000
+go build -o expe3000-gui ./cmd/expe3000-gui
 ```
 
 ## Running
 
+### GUI Version (Recommended)
+
+Starts with a setup window to select parameters:
+
 ```bash
-./expe3000-go -csv ../experiment.csv -stimuli-dir ../assets -font ../fonts/Inconsolata.ttf
+./expe3000-gui
 ```
 
-### Options
+### CLI Version
+
+```bash
+./expe3000 -csv ../experiment.csv -stimuli-dir ../assets -font ../fonts/Inconsolata.ttf
+```
+
+#### Options (CLI Only)
 
 - `-csv`: Path to the stimulus CSV file (required).
 - `-stimuli-dir`: Directory containing image and sound assets.
@@ -38,3 +51,4 @@ go build -o expe3000-go .
 - **Serial Communication**: Uses `go.bug.st/serial` for cross-platform support without CGo.
 - **Resource Caching**: Uses a Go map for more efficient lookups.
 - **CSV Parsing**: Uses the standard `encoding/csv` package.
+- **GUI Setup**: Custom GUI implemented in Go with SDL3/TTF and native file dialogs.
