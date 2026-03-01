@@ -26,9 +26,6 @@ pkg_check_modules(SDL3 REQUIRED IMPORTED_TARGET sdl3)
 pkg_check_modules(SDL3_IMAGE REQUIRED IMPORTED_TARGET sdl3-image)
 pkg_check_modules(SDL3_TTF REQUIRED IMPORTED_TARGET sdl3-ttf)
 
-# Include directories (include/ is local, the others are handled by the targets)
-include_directories(include)
-
 # Executable
 add_executable(expe3000 ${SOURCES})
 

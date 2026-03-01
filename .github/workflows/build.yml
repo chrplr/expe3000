@@ -9,7 +9,10 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm64' }}
     steps:
     - uses: actions/checkout@v4
     
@@ -55,6 +58,8 @@ jobs:
 
     - name: Package Linux
       run: |
+        VERSION=$(grep "EXPE3000_VERSION" src/version.h | cut -d '"' -f 2)
+        ARCH=$(uname -m | sed 's/aarch64/arm64/')
         mkdir -p release-linux
         cp build/expe3000 release-linux/
         cp README.md release-linux/
@@ -63,13 +68,15 @@ jobs:
         chmod +x release-linux/run_example.sh
         cp -r assets release-linux/
         cp -r fonts release-linux/
-        tar -czvf expe3000-linux.tar.gz -C release-linux .
+        tar -czvf "expe3000-${VERSION}-linux-${ARCH}.tar.gz" -C release-linux .
+        echo "PACKAGE_NAME=expe3000-${VERSION}-linux-${ARCH}.tar.gz" >> $GITHUB_ENV
+        echo "ARTIFACT_NAME=expe3000-linux-${ARCH}" >> $GITHUB_ENV
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: expe3000-linux
-        path: expe3000-linux.tar.gz
+        name: ${{ env.ARTIFACT_NAME }}
+        path: ${{ env.PACKAGE_NAME }}
 
   tag-release:
     needs: build-linux
@@ -87,7 +94,7 @@ jobs:
     - name: Extract version
       id: get_version
       run: |
-        VERSION=$(grep "EXPE3000_VERSION" include/version.h | cut -d '"' -f 2)
+        VERSION=$(grep "EXPE3000_VERSION" src/version.h | cut -d '"' -f 2)
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Check if tag exists
@@ -124,6 +131,8 @@ jobs:
 
     - name: Package macOS
       run: |
+        VERSION=$(grep "EXPE3000_VERSION" src/version.h | cut -d '"' -f 2)
+        ARCH=$(uname -m)
         mkdir -p release-macos
         cp build/expe3000 release-macos/
         cp README.md release-macos/
@@ -133,13 +142,16 @@ jobs:
         chmod +x release-macos/run_example.sh
         cp -r assets release-macos/
         cp -r fonts release-macos/
-        cd release-macos && zip -r ../expe3000-macos.zip .
+        cd release-macos && zip -r "../expe3000-${VERSION}-macos-${ARCH}.zip" .
+        cd ..
+        echo "PACKAGE_NAME=expe3000-${VERSION}-macos-${ARCH}.zip" >> $GITHUB_ENV
+        echo "ARTIFACT_NAME=expe3000-macos-${ARCH}" >> $GITHUB_ENV
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: expe3000-macos
-        path: expe3000-macos.zip
+        name: ${{ env.ARTIFACT_NAME }}
+        path: ${{ env.PACKAGE_NAME }}
 
   build-windows:
     runs-on: windows-latest
@@ -170,6 +182,8 @@ jobs:
     - name: Package Windows (with DLLs)
       shell: msys2 {0}
       run: |
+        VERSION=$(grep "EXPE3000_VERSION" src/version.h | cut -d '"' -f 2)
+        ARCH=$(uname -m)
         mkdir -p release-windows
         cp build/expe3000.exe release-windows/
         cp README.md release-windows/
@@ -180,13 +194,16 @@ jobs:
         cp -r fonts release-windows/
         # Collect all required MinGW DLLs automatically
         cp $(ldd build/expe3000.exe | grep /mingw64/bin | awk '{print $3}') release-windows/
-        cd release-windows && zip -r ../expe3000-windows.zip .
+        cd release-windows && zip -r "../expe3000-${VERSION}-windows-${ARCH}.zip" .
+        cd ..
+        echo "PACKAGE_NAME=expe3000-${VERSION}-windows-${ARCH}.zip" >> $GITHUB_ENV
+        echo "ARTIFACT_NAME=expe3000-windows-${ARCH}" >> $GITHUB_ENV
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: expe3000-windows
-        path: expe3000-windows.zip
+        name: ${{ env.ARTIFACT_NAME }}
+        path: "*.zip"
 
   create-release:
     needs: [build-linux, build-macos, build-windows, tag-release]
@@ -205,10 +222,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.tag-release.outputs.version }}
-          files: |
-            artifacts/expe3000-linux.tar.gz
-            artifacts/expe3000-macos.zip
-            artifacts/expe3000-windows.zip
+          files: artifacts/*
           draft: false
           prerelease: false
         env:

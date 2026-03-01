@@ -1,11 +1,13 @@
 # expe3000
 
-A multimedia stimulus delivery system built with C and SDL3. Designed for experimental psychology and neuroscience tasks requiring millisecond-accurate timing and low-latency audio. 
+A multimedia stimulus delivery system designed for experimental psychology and neuroscience tasks requiring millisecond-accurate timing and low-latency audio. 
 
-**Important Note**: stimuli are presented according to a fixed, predefined, schedule. Althought keypress events are saved, with a timestamp, the behavior of the program cannot be modified in real-time, e.g. you cannot provide immediate feedback. There is no notion of "trial". This approach is suitable for fMRI/MEG/EEG experiments with rigid stimulus presentation schedules.
+Stimuli are presented according to a fixed, predefined, schedule. Althought keypress events are saved, with a timestamp, the behavior of the program cannot be modified in real-time, e.g. you cannot provide immediate feedback. There is no notion of "trial". This approach is suitable for fMRI/MEG/EEG experiments with rigid stimulus presentation schedules.
 
 
 ## Features
+The software is built with C and SDL3, providing
+
 - **Precise Timing:** High-resolution timing loop with VSYNC synchronization and predictive onset look-ahead (pre-rendering).
 - **Low-Latency Audio:** Uses a manual mixing callback to keep the audio hardware "warm" and minimize startup delay.
 - **Text Stimuli:** Support for rendering text via TTF fonts.
@@ -14,44 +16,26 @@ A multimedia stimulus delivery system built with C and SDL3. Designed for experi
 - **Advanced Display Options:** Supports multiple monitors, custom resolutions, logical scaling, and magnification factors.
 - **Auto-exit:** Automatically concludes the experiment after the last stimulus or a specified total duration.
 
+**Note: This project is a work in progress, yet is already functionnal.**
+
 
 ### Quick Start with Examples
-If you downloaded a pre-compiled release, you can quickly test the program:
-- **GUI Mode**: Just double-click the `expe3000` executable. A setup window will appear allowing you to select your experiment file and settings.
-- **Example Scripts**:
-    - **Windows**: Double-click `run_example.bat`
-    - **Linux/macOS**: Run `./run_example.sh` in your terminal.
+If you downloaded the [expe3000 app](precompiled-binaries), you can quickly test it:
+- **GUI Mode**: Just double-click the `expe3000` executable. A setup window will appear allowing you to select your experiment file (e.g. `experiment.csv`) and settings.
+- **Command Line mode:**: See the example scripts:
+    - **Windows**:  `run_example.bat`
+    - **Linux/macOS**: `./run_example.sh`
 
-These scripts run the `expe3000` executable with the included `experiment.csv` and `assets` folder.
-
+  These scripts run the `expe3000` executable with the included `experiment.csv` and `assets` folder.
 
 Note: you can press **Escape** any time to interrupt the experiment and exit.
 
 
 ## Usage
 
-### Command Line
-```bash
-./expe3000 <experiment_csv> [options]
-```
-
-The csv file must have three columns:
-`timestamp_ms,duration_ms,type,content`
-
-**Types:** `IMAGE`, `SOUND`, `TEXT`
-
-**Example (`experiment.csv`):**
-```csv
-# timestamp, duration, type, content
-1000,500,IMAGE,target.png
-2000,0,SOUND,beep.wav
-3000,1500,TEXT,Bye
-```
-*Note: Use `0` duration for sounds.*
-
 
 ### Interactive GUI Mode
-If you run `expe3000` without any command-line arguments (and no `experiment.csv` is found in the current folder), or if you use the `--gui` option, an **Interactive Setup Window** will open. 
+If you run `expe3000` without any command-line arguments, or if you use the `--gui` option, an **Interactive Setup Window** will open. 
 
 This window allows you to:
 - **Select Files**: Use the "..." buttons to browse for your Experiment CSV, Stimuli Directory, and Output Results file.
@@ -59,6 +43,11 @@ This window allows you to:
 - **Toggle Features**: Enable or disable the fixation cross and Fullscreen mode.
 - **Launch**: Click **START** to begin the experiment once the CSV path is set.
 
+
+### Command Line
+```bash
+./expe3000 <experiment_csv> [options]
+```
 
 ### Options
 - `-h, --help`: Show help message.
@@ -84,6 +73,24 @@ This window allows you to:
 ./expe3000 experiment.csv --stimuli-dir assets --fullscreen
 ```
 
+
+The input csv file must have four columns:
+`timestamp_ms,duration_ms,type,content`
+
+
+**Example (`experiment.csv`):**
+```csv
+# timestamp, duration, type, content
+1000,500,IMAGE,target.png
+2000,0,SOUND,beep.wav
+3000,1500,TEXT,Bye
+```
+
+Possible values for the `type`  column: `IMAGE`, `SOUND`, `TEXT`
+
+*Note: Use `0` duration for sounds.*
+
+
 ### Output
 Upon exiting, the program generates a log file (default: `results.csv`) containing:
 - **Metadata Header:** Detailed session info (date, user, host, command, OS, driver, renderer, resolution).
@@ -92,13 +99,13 @@ Upon exiting, the program generates a log file (default: `results.csv`) containi
   - `event_type`: `IMAGE_ONSET`, `IMAGE_OFFSET`, `SOUND_ONSET`, `TEXT_ONSET`, `TEXT_OFFSET`, or `RESPONSE`.
   - `label`: The stimulus content/file path or the name of the key pressed.
 
+---
 
+## Installation
 
-## Installing Binaries
+### Precompiled Binaries
 
 Pre-compiled binaries for Linux, macOS, and Windows are available in the [Releases](https://github.com/chrplr/expe3000/releases) section of the GitHub project.
-
-### Dependencies
 
 The pre-compiled binaries for **Windows** are self-contained and include all necessary DLLs. 
 
@@ -115,7 +122,7 @@ For **Linux** and **macOS**, you need to have the SDL3 libraries installed on yo
 
    *Note: If your distribution does not yet provide SDL3 packages, you may need to compile them from source(INSTALL_Linux.md#3-option-b-compiling-sdl3-from-source-universal).*
 
-## Compilation
+### Compiling from scratch
 
 For detailed installation and compilation instructions, please refer to the guide for your operating system:
 
@@ -125,11 +132,9 @@ For detailed installation and compilation instructions, please refer to the guid
 
 
 
-
-
 ## License
 
-This code was developed by Christophe Pallier <christophe@pallier.org> using Gemini3. Of course, all remaining bugs are entirely the responsibility of Gemini 3 ;-)
+This code was developed by [Christophe Pallier](http://www.pallier.org]  <christophe@pallier.org> using Gemini-cli (Gemini 3). Of course, all remaining bugs are entirely the responsibility of Gemini 3 ;-)
 
 The code is distributed under the GNU LICENSE GPLv3.
 
