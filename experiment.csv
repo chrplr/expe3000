@@ -2,7 +2,7 @@
 2000,500,IMAGE,face01.png
 3000,500,TEXT,Hello !
 4000,500,IMAGE,body03.png
-5000,0,SOUND,sound02.wav
+5000,1,SOUND,sound02.wav
 6000,500,IMAGE,house03.png
 7000,500,IMAGE,face12.png
 8000,500,IMAGE,Mu01.png
@@ -45,4 +45,4 @@
 45000,500,IMAGE,eq01.png
 46000,500,IMAGE,graph07.png
 47000,500,IMAGE,face13.png
-48000,0,SOUND,sound01.wav
+48000,1,SOUND,sound01.wav
